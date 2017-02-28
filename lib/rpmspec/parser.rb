@@ -1,22 +1,23 @@
-require 'pp'
 module RPMSpec
   class Parser
     def initialize(file)
       raise RPMSpec::Exception, 'specfile not found.' unless File.exist?(file)
       text = open(file, 'r:UTF-8').read
-      @subpackages = subpackages?(text) ? subpackages(text) : []
-      @text = subpackages?(text) ? strip_subpackages(@subpackages, text) : text
+      @subpackages = has_subpackages?(text) ? find_subpackages(text) : []
+      @text = has_subpackages?(text) ? strip_subpackages(@subpackages, text) : text
     end
 
     def parse(text=@text)
       p @text
     end
 
-    def subpackages?(text)
+    private
+
+    def has_subpackages?(text)
       text.scan('%package').empty? ? false : true
     end
 
-    def subpackages(text)
+    def find_subpackages(text)
       text.scan(/%package.*?\n\n/m).map do |s|
         s_name = s.match(/%package.*?\n/)[0].sub('%package','').sub('-n','').strip!
         # use single line match to find '%description devel'
@@ -35,7 +36,7 @@ module RPMSpec
     end
 
     # find texts contains specified tags and conditional tags
-    def find(tag,text)
+    def find(tag,text=@text)
       # break specfile to lines
       arr = text.split("\n")
       tags = []
@@ -69,5 +70,3 @@ module RPMSpec
     end
   end
 end
-require './exception.rb'
-pp RPMSpec::Parser.new('kcm5-fcitx.spec').parse
