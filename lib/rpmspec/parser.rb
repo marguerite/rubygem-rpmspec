@@ -3,40 +3,17 @@ module RPMSpec
     def initialize(file)
       raise RPMSpec::Exception, 'specfile not found.' unless File.exist?(file)
       text = open(file, 'r:UTF-8').read
-      @subpackages = has_subpackages?(text) ? find_subpackages(text) : []
-      @text = has_subpackages?(text) ? strip_subpackages(@subpackages, text) : text
+      @text = RPMSpec::Subpackage.new(text).strip
+      @scriptlets = RPMSpec::Scriptlet.new(text).scriptlets_texts
     end
 
-    def parse(text=@text)
-      p @text
+    def parse(text = @text)
     end
 
     private
 
-    def has_subpackages?(text)
-      text.scan('%package').empty? ? false : true
-    end
-
-    def find_subpackages(text)
-      text.scan(/%package.*?\n\n/m).map do |s|
-        s_name = s.match(/%package.*?\n/)[0].sub('%package','').sub('-n','').strip!
-        # use single line match to find '%description devel'
-        s_desc_start = text.match(/%description.*?#{s_name}/)[0]
-        s_desc = text.match(/#{s_desc_start}[^%]*\n\n/m)[0]
-        # use single line match to find "%file devel"
-        s_file_start = text.match(/%file.*?#{s_name}/)[0]
-        s_file = text.match(/#{s_file_start}.*?\n\n/m)[0]
-        [s, s_desc, s_file]
-      end
-    end
-
-    def strip_subpackages(subpackages,text)
-      subpackages.each {|s| s.each {|i| text.sub!(i, '') } }
-      text
-    end
-
     # find texts contains specified tags and conditional tags
-    def find(tag,text=@text)
+    def find(tag, text = @text)
       # break specfile to lines
       arr = text.split("\n")
       tags = []
@@ -65,7 +42,7 @@ module RPMSpec
           tags << arr[index + 1]
         end
       end
-      tags.each {|l| result << l + "\n" }
+      tags.each { |l| result << l + "\n" }
       result
     end
   end
