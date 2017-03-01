@@ -15,7 +15,7 @@ module RPMSpec
       text = @text.dup
       text = RPMSpec::Source.new(text).strip
       text = RPMSpec::Patch.new(text).strip
-      p text
+      text = RPMSpec::Preamble.new(text).strip
     end
 
     private
