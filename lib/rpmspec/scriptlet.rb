@@ -2,128 +2,192 @@ module RPMSpec
   class Scriptlet
     def initialize(text)
       @text = text
+      @arr = @text.split("\n")
+      @block = scriptlets_block
     end
 
-    def scriptlet_texts(text)
-      return unless has_scriptlets?(text)
-      arr = text.split("\n").reject!(&:empty?)
-      scriptlets = []
-      # must with index because there may be many such
-      # tags in the whole specfile, not able to find
-      # the correct index later.
-      arr.each_with_index do |l, index|
-        next unless l =~ /^(%pre$|%preun|%post)/
-        # if unclosed, we need to include the conditional
-        # '%if' '%else' '%endif'
-        if unclosed?(index, arr)
-          previous_if = scriptlet_if_content(index, arr)
-          scriptlets << previous_if unless scriptlets.include?(previous_if)
-          scriptlets << l
-          next_endif = scriptlet_endif_content(index, arr)
-          next_endif.each { |i| scriptlets << i }
-        else
-          # we just need to find the text after the scriptlet
-          # indicator.
-          scriptlets << scriptlet_content(l, text)
-        end
+    def scriptlets
+      unpaired = unpaired_conditionals
+      if_counts = find_if_counts(unpaired)
+      endif_counts = find_endif_counts(unpaired)
+      before = arr_to_s(beginning_ifs(if_counts))
+      after = tailing_block(endif_counts)
+      scriptlets_texts = before + arr_to_s(@block) + after
+      scriptlets_texts
+    end
+
+    def strip
+      unpaired = unpaired_conditionals
+      if_counts = find_if_counts(unpaired)
+      endif_counts = find_endif_counts(unpaired)
+      last_if = @arr.index(beginning_ifs(if_counts)[-1])
+      last_endif = furthest_endif(endif_counts)
+      if @arr[last_if..first_tag].reject!(&:empty?).size > 2
+        before = arr_to_s(@arr[0..first_tag - 1])
+        after = arr_to_s(@arr[last_endif + 1..-1])
+        before + print_n_endif(if_counts) + after
+      else
+        @text
       end
-      scriptlets
     end
 
     private
 
-    def has_scriptlets?(text)
-      text.scan(/(%pre|%preun|%post|%postun)/).empty? ? false : true
+    # print n '%endif's
+    def print_n_endif(n)
+      str = ''
+      n.times { str << "%endif\n" }
+      str
     end
 
-    def scriptlet_endif_content(index, arr)
-      # find the nearest 'else' or 'endif'
-      nearest = 0
-      arr[index..arr.size - 1].each do |i|
-        if i.start_with?('%else', '%endif')
-          nearest = index + arr[index..arr.size - 1].index(i)
+    # concat array items to a string
+    def arr_to_s(arr)
+      str = ''
+      arr.each { |i| str << i + "\n" }
+      str
+    end
+
+    # the first tag's line number
+    def first_tag
+      index = 0
+      @arr.each_with_index do |i, j|
+        if i =~ /^%(pre$|preun|post)/
+          index = j
+          break
         end
       end
+      index
+    end
 
-      # exclude itself
-      if arr[(index + 1)..nearest].select { |i| i =~ /^%(pre$|preun|post)/ }.empty?
-        arr[index + 1..nearest]
-      else
-        # find the next tag
-        newindex = 0
-        arr[(index + 1)..nearest].each do |i|
-          if i =~ /^%(pre$|preun|post)/
-            newindex = index + 1 + arr[(index + 1)..nearest].index(i)
-            break
+    # the last tag's line number
+    def last_tag
+      index = 0
+      @arr.reverse.each_with_index do |i, j|
+        if i =~ /^%(pre$|preun|post)/
+          index = @arr.size - 1 - j
+          break
+        end
+      end
+      index
+    end
+
+    # find the text between the first tag and the last tag
+    def scriptlets_block
+      @arr[first_tag..last_tag]
+    end
+
+    # filter the conditionals from an array
+    def conditionals_filter(arr)
+      conditionals = []
+      arr.each do |i|
+        conditionals << i if i =~ /^%(if|else|endif)/
+      end
+      conditionals
+    end
+
+    # find the unpaired conditionals from a conditional array
+    def unpaired_conditionals(arr = nil)
+      arr ||= conditionals_filter(@block)
+      paired = []
+      unpaired = []
+      arr.each_with_index do |i, j|
+        # the last is if, unpaired
+        if j != arr.size - 1 && i.start_with?('%if')
+          if arr[j + 1].start_with?('%else')
+            # the second last is if, the last is else, unpaired
+            if !arr[j + 2].nil? && arr[j + 2].start_with?('%endif')
+              paired << j
+              paired << j + 1
+              paired << j + 2
+            end
+          elsif arr[j + 1].start_with?('%endif')
+            paired << j
+            paired << j + 1
           end
         end
-        # exclude the next tag
-        arr[index + 1..newindex - 1]
       end
+      arr.each_with_index { |i, j| unpaired << i unless paired.include?(j) }
+      unpaired
     end
 
-    def scriptlet_if_content(index, arr)
-      # [0,1,2,3,4]
-      # [0,1,2]
-      # [2,1,0]
-      # i = 0, j = 2
-      # i = 1, j = 1
-      # i = 2, j = 0
-      # j = size - 1 - i
-      array = arr[0..index].reverse
-      nearest = 0
-      # find the nearest if
-      array.each do |i|
+    # find how many 'if's we need to close the unclosed conditionals
+    def find_if_counts(arr)
+      counts = 0
+      arr.each_with_index do |i, j|
+        counts += 1 if i.start_with?('%endif')
+        # avoid duplicate counts
+        if i.start_with?('%else')
+          if j == arr.size - 1
+            # the last is else, without if in front of it
+            # needs an if
+            counts += 1 unless arr[j - 1].start_with?('%if')
+          elsif j.zero?
+            # the beginning else without following endif needs an if
+            counts += 1 unless arr[j + 1].start_with?('%endif')
+          elsif arr[j - 1].start_with?('%if')
+            # do nothing because an if has been given
+          elsif arr[j + 1].start_with?('%endif')
+            # do nothing count the following endif instead
+          else
+                counts += 1
+          end
+        end
+      end
+      counts
+    end
+
+    # find how many 'endif's we need to close the unclosed conditionals
+    def find_endif_counts(arr)
+      counts = 0
+      arr.each_with_index do |i, j|
+        counts += 1 if i.start_with?('%if')
+        # avoid duplicate counts
+        if i.start_with?('%else')
+          # the last is if, needs an endif
+          if j == arr.size - 1
+            counts += 1
+          elsif !j.zero? && arr[j - 1].start_with?('%if')
+            # do nothing count the if instead
+          elsif arr[j + 1].start_with?('%endif')
+            # do nothing, an endif has been given
+          else
+            counts += 1
+          end
+        end
+      end
+      counts
+    end
+
+    # find the N ifs before scriptlet_block
+    def beginning_ifs(counts)
+      ifs = []
+      @arr[0..first_tag].reverse.each do |i|
+        break if counts.zero?
         if i.start_with?('%if')
-          nearest = arr[0..index].size - 1 - array.index(i)
-          break
+          ifs << i
+          counts -= 1
         end
       end
-      # if there's endif in this range, then the if we found
-      # is closed, we need find the previous if and test again
-      unclosed = arr[nearest..index].select! { |i| i == '%endif' }.empty?
-      return arr[nearest] if unclosed
-      endif_index = 0
-      arr[nearest..index].each do |i|
-        if i == '%endif'
-          endif_index = nearest + arr[nearest..index].index(i)
-          break
-        end
-      end
-      # delete the pair of closed if/endif and start over again
-      newarr = arr.delete_if do |i|
-        arr.index(i) == nearest || arr.index(i) == endif_index
-      end
-      scriptlet_if_content(index, newarr)
+      ifs.reverse
     end
 
-    def scriptlet_content(line, text)
-      # match the block below line
-      text = text.match(/#{line}.*?\n\n/m)[0]
-      arr = text.split("\n")
-      index = arr.index(line)
-      if arr.size == 1
-        line
-      elsif arr[index + 1] =~ /^%(pre$|preun|post)/
-        line
-      else
-        text
-      end
+    # the texts between the last tag and the furthest endif
+    def tailing_block(counts)
+      tag = last_tag
+      endif = furthest_endif(counts)
+      arr_to_s(@arr[tag..endif])
     end
 
-    def unclosed?(index, arr)
-      array = arr[index..arr.size - 1]
-      nearest = 0
-      # narrow the array to the nearest 'else' or 'endif'
-      array.each do |i|
-        if i.start_with?('%else', '%endif')
-          nearest = index + array.index(i)
-          break
+    # the furthest endif's line number
+    def furthest_endif(counts)
+      index = 0
+      @arr[last_tag..-1].each_with_index do |i, j|
+        if i.start_with?('%endif')
+          index = j if counts == 1
+          counts -= 1
         end
       end
-      # if there's '%if' in this range, then the thing we found
-      # is closed.
-      arr[index..nearest].select! { |i| i.start_with?('%if') }.empty?
+      last_tag + index
     end
   end
 end

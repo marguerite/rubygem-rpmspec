@@ -11,7 +11,7 @@ module RPMSpec
 
     # parse conditional texts into an array of '@struct's
     def parse(text = @text)
-      items = text.split("\n").reject! { |i| i.strip.start_with?('%') }
+      items = text.split("\n").reject! { |i| i.strip.start_with?('%if', '%else', '%endif') }
       items.map! do |i|
         conditionals = find_conditional(i).map! do |j|
           j.strip.gsub(/%if-level-\d+(.*)/) { Regexp.last_match(1) }.strip
