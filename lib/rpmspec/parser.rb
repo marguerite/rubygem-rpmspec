@@ -3,8 +3,14 @@ module RPMSpec
     def initialize(file)
       raise RPMSpec::Exception, 'specfile not found.' unless File.exist?(file)
       text = open(file, 'r:UTF-8').read
-      @text = RPMSpec::Subpackage.new(text).strip
-      @scriptlets = RPMSpec::Scriptlet.new(text).scriptlets_texts
+      @subpackages = RPMSpec::SubPackage.new(text).subpackages
+      text = RPMSpec::SubPackage.new(text).strip
+      @scriptlets = if RPMSpec::Scriptlet.new(text).scriptlets?
+                      RPMSpec::Scriptlet.new(text).scriptlets
+                    else
+                      nil
+                    end
+      @text = RPMSpec::Scriptlet.new(text).strip
     end
 
     def parse(text = @text)

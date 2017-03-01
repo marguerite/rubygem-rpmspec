@@ -11,7 +11,7 @@ module RPMSpec
 
     # parse conditional texts into an array of '@struct's
     def parse(text = @text)
-      items = text.split("\n").reject! { |i| i.strip.start_with?('%if', '%else', '%endif') }
+      items = text.split("\n").reject! { |i| i.strip =~ /^%(if|else|endif)/ }
       items.map! do |i|
         conditionals = find_conditional(i).map! do |j|
           j.strip.gsub(/%if-level-\d+(.*)/) { Regexp.last_match(1) }.strip
@@ -58,7 +58,7 @@ module RPMSpec
       nearest = find_nearest_conditional(item, arr)
 
       # find all remaining conditinals before the item
-      remains = arr[0..(nearest - 1)].select! { |i| i.strip.start_with?('%') }
+      remains = arr[0..(nearest - 1)].select! { |i| i.strip =~ /^%(if|else|endif)/ }
       level = find_level(arr[nearest])
       # only the 'if' and 'else' need to insert themselves to conditionals
       # for the 'endif', we know the block before it is finished
@@ -90,7 +90,7 @@ module RPMSpec
       # item is always the last element of arr
       near = 0
       arr[0..-2].reverse.each_with_index do |i, j|
-        next unless i.strip.start_with?('%')
+        next unless i.strip =~ /^%(if|else|endif)/
         # because it's reversed
         # [0, 1, 2, 3, 4]
         # arr[0..-2].reverse = [4, 3, 2, 1, 0]

@@ -4,16 +4,23 @@ module RPMSpec
       @text = text
       @arr = @text.split("\n")
       @block = scriptlets_block
+      @struct = Struct.new(:name, :content, :conditionals)
+    end
+
+    def scriptlets?
+      @text.scan(/^%(pre$|preun|post)/).empty? ? false : true
     end
 
     def scriptlets
-      unpaired = unpaired_conditionals
-      if_counts = find_if_counts(unpaired)
-      endif_counts = find_endif_counts(unpaired)
-      before = arr_to_s(beginning_ifs(if_counts))
-      after = tailing_block(endif_counts)
-      scriptlets_texts = before + arr_to_s(@block) + after
-      scriptlets_texts
+      scriptlets = []
+      text = format(scriptlet_texts)
+      RPMSpec::Conditional.new(text).parse.each do |s|
+        name = s.name.split(/\s+/)[0]
+        content = s.name.sub(name, '').strip
+        conditionals = s.conditionals.empty? ? nil : s.conditionals
+        scriptlets << @struct.new(name, content, conditionals)
+      end
+      scriptlets
     end
 
     def strip
@@ -31,7 +38,62 @@ module RPMSpec
       end
     end
 
+    def self.to_s(arr)
+      str = ''
+      arr.each do |s|
+        if s.conditionals.nil?
+          str << if s.content.start_with?('-n')
+                   s.name + "\s" + s.content + "\n"
+                 else
+                   s.name + "\n" + s.content + "\n"
+                 end
+        else
+          s.conditionals.each do |i|
+            str << "%if\s" + i + "\n"
+          end
+          str << if s.content.start_with?('-n')
+                   s.name + "\s" + s.content + "\n"
+                 else
+                   s.name + "\n" + s.content + "\n"
+                 end
+          s.conditionals.size.times { str << "%endif\n" }
+        end
+      end
+      str
+    end
+
     private
+
+    def scriptlet_texts
+      unpaired = unpaired_conditionals
+      if_counts = find_if_counts(unpaired)
+      endif_counts = find_endif_counts(unpaired)
+      before = arr_to_s(beginning_ifs(if_counts))
+      after = tailing_block(endif_counts)
+      before + arr_to_s(@block) + after
+    end
+
+    # format the scriptlet texts for conditionals parsing
+    def format(text)
+      newarr = []
+      arr = text.split("\n")
+      arr.each_with_index do |i, j|
+        newarr << i if i =~ /^%(if|else|endif)/
+        if i =~ /^%(pre$|preun|post)/
+          if j == arr.size - 1
+            newarr << i
+          else
+            str = i
+            n = 0
+            unless arr[j + 1 + n] =~ /^%(pre$|preun|post)/
+              str << "\s" + arr[j + 1 + n]
+            end
+            newarr << str
+          end
+        end
+      end
+      arr_to_s(newarr)
+    end
 
     # print n '%endif's
     def print_n_endif(n)
@@ -175,7 +237,7 @@ module RPMSpec
     def tailing_block(counts)
       tag = last_tag
       endif = furthest_endif(counts)
-      arr_to_s(@arr[tag..endif])
+      tag < endif ? arr_to_s(@arr[tag..endif]) : ''
     end
 
     # the furthest endif's line number
