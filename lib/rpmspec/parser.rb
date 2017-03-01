@@ -12,7 +12,6 @@ module RPMSpec
     end
 
     def parse
-      find('BuildRequires')
     end
 
     private
