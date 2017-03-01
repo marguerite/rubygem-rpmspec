@@ -21,6 +21,20 @@ module RPMSpec
       parse('Requires')
     end
 
+    def self.to_s(arr, tag)
+      str = ''
+      arr.each do |s|
+        if s.conditionals.nil?
+          str << tag + ":\s\s" + s.name + "\n"
+        else
+          s.conditionals.each { |i| str << "%if\s" + i + "\n" }
+          str << tag + ":\s\s" + s.name + "\n"
+          s.conditionals.size.times { str << "%endif\n" }
+        end
+      end
+      str
+    end
+
     private
 
     def parse(tag)
