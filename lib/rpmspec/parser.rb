@@ -12,6 +12,10 @@ module RPMSpec
     end
 
     def parse
+      text = @text.dup
+      text = RPMSpec::Source.new(text).strip
+      text = RPMSpec::Patch.new(text).strip
+      p text
     end
 
     private
