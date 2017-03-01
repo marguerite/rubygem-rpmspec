@@ -14,17 +14,28 @@ module RPMSpec
     def scriptlets
       scriptlets = []
       text = format(scriptlet_texts)
-      RPMSpec::Conditional.new(text).parse.each do |s|
-        name = s.name.split(/\s+/)[0]
-        content = s.name.sub(name, '').strip
-        conditionals = s.conditionals.empty? ? nil : s.conditionals
-        scriptlets << @struct.new(name, content, conditionals)
+      if RPMSpec::Conditional.new(text).conditional?
+        RPMSpec::Conditional.new(text).parse.each do |s|
+          name = s.name.split(/\s+/)[0]
+          content = s.name.sub(name, '').strip
+          conditionals = s.conditionals.empty? ? nil : s.conditionals
+          scriptlets << @struct.new(name, content, conditionals)
+        end
+      else
+        text.split("\n").each do |i|
+          name = i.split(/\s+/)[0]
+          content = i.sub(name, '').strip
+          scriptlets << @struct.new(name, content, nil)
+        end
       end
       scriptlets
     end
 
     def strip
       unpaired = unpaired_conditionals
+      # empty unpaired indicates the scriptlet is self-closed.
+      # just use the normal skip
+      return arr_to_s(@arr[0..first_tag - 1]) + arr_to_s(@arr[last_tag + 1..-1]) if unpaired.empty?
       if_counts = find_if_counts(unpaired)
       endif_counts = find_endif_counts(unpaired)
       last_if = @arr.index(beginning_ifs(if_counts)[-1])

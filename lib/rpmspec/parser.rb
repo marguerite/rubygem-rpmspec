@@ -7,13 +7,12 @@ module RPMSpec
       text = RPMSpec::SubPackage.new(text).strip
       @scriptlets = if RPMSpec::Scriptlet.new(text).scriptlets?
                       RPMSpec::Scriptlet.new(text).scriptlets
-                    else
-                      nil
                     end
       @text = RPMSpec::Scriptlet.new(text).strip
     end
 
-    def parse(text = @text)
+    def parse
+      find('BuildRequires')
     end
 
     private

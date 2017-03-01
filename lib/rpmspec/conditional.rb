@@ -9,9 +9,13 @@ module RPMSpec
       @struct = Struct.new(:name, :conditionals)
     end
 
+    def conditional?
+      @text.scan('%endif').empty? ? false : true
+    end
+
     # parse conditional texts into an array of '@struct's
-    def parse(text = @text)
-      items = text.split("\n").reject! { |i| i.strip =~ /^%(if|else|endif)/ }
+    def parse
+      items = @text.split("\n").reject! { |i| i.strip =~ /^%(if|else|endif)/ }
       items.map! do |i|
         conditionals = find_conditional(i).map! do |j|
           j.strip.gsub(/%if-level-\d+(.*)/) { Regexp.last_match(1) }.strip
