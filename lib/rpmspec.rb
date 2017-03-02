@@ -1,18 +1,14 @@
-require 'rpmspec/build.rb'
-require 'rpmspec/changelog.rb'
-require 'rpmspec/check.rb'
-require 'rpmspec/conditional.rb'
-require 'rpmspec/dependency.rb'
-require 'rpmspec/description.rb'
-require 'rpmspec/exception.rb'
-require 'rpmspec/files.rb'
-require 'rpmspec/install.rb'
-require 'rpmspec/macros.rb'
-require 'rpmspec/parser.rb'
-require 'rpmspec/patch.rb'
-require 'rpmspec/preamble.rb'
-require 'rpmspec/prep.rb'
-require 'rpmspec/scriptlet.rb'
-require 'rpmspec/source.rb'
-require 'rpmspec/subpackage.rb'
-require 'rpmspec/version.rb'
+dir = File.basename(__FILE__).sub('.rb', '')
+path = File.join(File.dirname(File.expand_path(__FILE__)), dir)
+Dir.glob(path + '/*').each do |i|
+  require dir + '/' + File.basename(i) if File.basename(i) =~ /\.rb/
+end
+
+module RPMSpec
+  # concat array items to a string
+  def self.arr_to_s(arr)
+    str = ''
+    arr.each { |i| str << i + "\n" }
+    str
+  end
+end

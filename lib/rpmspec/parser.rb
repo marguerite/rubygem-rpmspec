@@ -16,17 +16,25 @@ module RPMSpec
       text = RPMSpec::Source.new(text).strip
       text = RPMSpec::Patch.new(text).strip
       text = RPMSpec::Preamble.new(text).strip
+      init_stages
+      Prep.new.parse + Build.new.parse + Install.new.parse
     end
 
-    private
+    # create classes for stages
+    def init_stages
+      stage_struct = Struct.new(:class, :regex, :text)
+      s = [stage_struct.new('prep', /^%build/, @text),
+           stage_struct.new('build', /^%install/, @text),
+           stage_struct.new('install', /^%(post|pre$|preun|check|files|changelog)/, @text)]
+      RPMSpec::Stage.new(s).create_stages
+    end
 
     # find texts contains specified tags and conditional tags
-    def find(tag, text = @text)
+    def dependency_tags(tag, text = @text)
       # break specfile to lines
       arr = text.split("\n")
       tags = []
       line_numbers = []
-      result = ''
       # loop the lines
       arr.each do |l|
         # must start with the tag
@@ -50,8 +58,7 @@ module RPMSpec
           tags << arr[index + 1]
         end
       end
-      tags.each { |l| result << l + "\n" }
-      result
+      RPMSpec.arr_to_s(tags)
     end
   end
 end

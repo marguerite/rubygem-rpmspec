@@ -46,13 +46,7 @@ module RPMSpec
         break unless i.start_with?('#')
         comments << i if i.start_with?('#')
       end
-      comments.empty? ? nil : arr_to_s(comments.reverse)
-    end
-
-    def arr_to_s(arr)
-      str = ''
-      arr.each { |i| str << i + "\n" }
-      str
+      comments.empty? ? nil : RPMSpec.arr_to_s(comments.reverse)
     end
   end
 end

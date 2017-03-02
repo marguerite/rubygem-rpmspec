@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+
+$LOAD_PATH.push(File.expand_path(File.dirname(__FILE__) + '/../lib'))
+
+require 'rpmspec'
+
+open('test.spec', 'w') do |f1|
+f1.write RPMSpec::Parser.new('kcm5-fcitx.spec').parse
+end

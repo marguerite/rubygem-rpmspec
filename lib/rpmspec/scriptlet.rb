@@ -35,14 +35,14 @@ module RPMSpec
       unpaired = unpaired_conditionals
       # empty unpaired indicates the scriptlet is self-closed.
       # just use the normal skip
-      return arr_to_s(@arr[0..first_tag - 1]) + arr_to_s(@arr[last_tag + 1..-1]) if unpaired.empty?
+      return RPMSpec.arr_to_s(@arr[0..first_tag - 1]) + RPMSpec.arr_to_s(@arr[last_tag + 1..-1]) if unpaired.empty?
       if_counts = find_if_counts(unpaired)
       endif_counts = find_endif_counts(unpaired)
       last_if = @arr.index(beginning_ifs(if_counts)[-1])
       last_endif = furthest_endif(endif_counts)
       if @arr[last_if..first_tag].reject!(&:empty?).size > 2
-        before = arr_to_s(@arr[0..first_tag - 1])
-        after = arr_to_s(@arr[last_endif + 1..-1])
+        before = RPMSpec.arr_to_s(@arr[0..first_tag - 1])
+        after = RPMSpec.arr_to_s(@arr[last_endif + 1..-1])
         before + print_n_endif(if_counts) + after
       else
         @text
@@ -79,9 +79,9 @@ module RPMSpec
       unpaired = unpaired_conditionals
       if_counts = find_if_counts(unpaired)
       endif_counts = find_endif_counts(unpaired)
-      before = arr_to_s(beginning_ifs(if_counts))
+      before = RPMSpec.arr_to_s(beginning_ifs(if_counts))
       after = tailing_block(endif_counts)
-      before + arr_to_s(@block) + after
+      before + RPMSpec.arr_to_s(@block) + after
     end
 
     # format the scriptlet texts for conditionals parsing
@@ -103,20 +103,13 @@ module RPMSpec
           end
         end
       end
-      arr_to_s(newarr)
+      RPMSpec.arr_to_s(newarr)
     end
 
     # print n '%endif's
     def print_n_endif(n)
       str = ''
       n.times { str << "%endif\n" }
-      str
-    end
-
-    # concat array items to a string
-    def arr_to_s(arr)
-      str = ''
-      arr.each { |i| str << i + "\n" }
       str
     end
 
@@ -248,7 +241,7 @@ module RPMSpec
     def tailing_block(counts)
       tag = last_tag
       endif = furthest_endif(counts)
-      tag < endif ? arr_to_s(@arr[tag..endif]) : ''
+      tag < endif ? RPMSpec.arr_to_s(@arr[tag..endif]) : ''
     end
 
     # the furthest endif's line number

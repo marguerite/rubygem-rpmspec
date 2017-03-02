@@ -6,18 +6,18 @@ module RPMSpec
     end
 
     def parse
-      str = ''
       preamble = []
       @arr.each do |i|
         break unless i =~ /^#/ || i.empty?
         preamble << i if i =~ /^#/ || i.empty?
       end
-      preamble.each { |i| str << i + "\n" }
-      str
+      return if preamble.reject(&:empty?).empty?
+      RPMSpec.arr_to_s(preamble)
     end
 
     def strip
-      @text.sub(parse, '')
+      str = parse.nil? ? '' : parse
+      @text.sub(str, '')
     end
   end
 end
