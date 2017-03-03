@@ -25,7 +25,8 @@ module RPMSpec
       stage_struct = Struct.new(:class, :regex, :text)
       s = [stage_struct.new('prep', /^%build/, @text),
            stage_struct.new('build', /^%install/, @text),
-           stage_struct.new('install', /^%(post|pre$|preun|check|files|changelog)/, @text)]
+           stage_struct.new('install', /^%(post|pre$|preun|check|files|changelog)/, @text),
+           stage_struct.new('check', /^%(post|pre$|preun|files|changelog)/, @text)]
       RPMSpec::Stage.new(s).create_stages
     end
 
