@@ -40,7 +40,7 @@ module RPMSpec
       conditionals = s.scan(/%if.*?%endif/m)
       # the normal tags
       conditionals.each { |i| s.sub!(i, '') } unless conditionals.empty?
-      normals = s.split("\n").select! { |i| i.strip.start_with?(tag) }
+      normals = s.split("\n").reject(&:empty?)
                  .map! { |i| @struct.new(i.sub!(tag + ':', '').strip!, nil) }
       return normals if conditionals.empty?
       conds = []
