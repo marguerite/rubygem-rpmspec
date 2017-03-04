@@ -6,4 +6,6 @@ module RPMSpec
   SINGLE_TAGS = %w(Name Version Release License
                    Group Url Summary BuildRoot
                    BuildArch).freeze
+  SUBPACKAGE_TAGS = %w(Version License Group
+                       Summary BuildArch).freeze
 end

@@ -47,7 +47,7 @@ module RPMSpec
       normals = []
       s.split("\n").reject(&:empty?).each do |i|
                   # modifier: modifier to the tag, eg Requires(post)
-                  modifier = Regexp.last_match(1) if i.match(/\((.*)\)/)
+                  modifier = Regexp.last_match(1) if i.match(/\((.*)\):/)
                   content = i.sub!(/#{tag}.*?:/, '').strip!
                   if content.match(/(>|=|<).*$/)
                     # have an expression Requires: abc > 1.0.0
@@ -67,7 +67,7 @@ module RPMSpec
       conds = []
       conditionals.each do |i|
         RPMSpec::Conditional.new(i).parse.each do |j|
-          modifier = Regexp.last_match(1) if j.name.match(/\((.*)\)/)
+          modifier = Regexp.last_match(1) if j.name.match(/\((.*)\):/)
           content = j.name.sub!(/#{tag}.*?:/, '').strip!
           if content.match(/(>|=|<).*$/)
             version = Regexp.last_match(0)

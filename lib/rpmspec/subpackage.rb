@@ -9,6 +9,20 @@ module RPMSpec
     end
 
     def subpackages
+      return if subelements.nil?
+      subelements.map! { |i| RPMSpec.arr_to_s(i, false) }
+    end
+
+    def strip
+      return @text if subelements.nil?
+      newtext = @text.dup
+      subelements.each { |s| s.each { |i| newtext.sub!(i, '') } }
+      newtext
+    end
+
+    private
+
+    def subelements
       return unless subpackages?
       @text.scan(/%package.*?\n\n/m).map do |s|
         s_name = s.match(/%package.*?\n/)[0].sub('%package', '').sub('-n', '').strip!
@@ -20,13 +34,6 @@ module RPMSpec
         s_file = @text.match(/#{s_file_start}.*?\n\n/m)[0]
         [s, s_desc, s_file]
       end
-    end
-
-    def strip
-      return @text if subpackages.nil?
-      newtext = @text.dup
-      subpackages.each { |s| s.each { |i| newtext.sub!(i, '') } }
-      newtext
     end
   end
 end

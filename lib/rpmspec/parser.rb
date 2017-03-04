@@ -11,7 +11,7 @@ module RPMSpec
 
     def parse
       init_stages
-      tags = pick_tags
+      tags = pick_tags(@text)
 
       specfile = OpenStruct.new
       specfile.preamble = RPMSpec::Preamble.new(@text).parse
@@ -25,29 +25,40 @@ module RPMSpec
       specfile.install = Install.new.parse
       specfile.check = Check.new.parse
       specfile.scriptlets = RPMSpec::Scriptlet.new(@text).scriptlets if RPMSpec::Scriptlet.new(@text).scriptlets?
-      if @text =~ /%files/
-        filesobj = RPMSpec::Filelist.new(@text)
-        specfile.files = filesobj.files
-      end
+      specfile.files = RPMSpec::Filelist.new(@text).files if @text =~ /%files/
+      specfile.subpackages = parse_subpackages(@subpackages)
       specfile.changelog = RPMSpec::Changelog.new(@text).entries
       SINGLE_TAGS.each { |i| fill_tag(i, specfile, tags) }
-      p @subpackages
       specfile
     end
 
     private
 
-    def fill_dependency(tag, ostruct)
-      ostruct[tag.downcase] = RPMSpec::Dependency.new(dependency_tags(tag)).parse(tag)
+    def parse_subpackages(arr)
+      return if arr.nil?
+      arr.map! do |s|
+        subpkg = OpenStruct.new
+        nameline = s.match(/%package(.*?)\n/)[1]
+        subpkg.name = nameline =~ /-n/ ? nameline.sub!('-n','').strip! : nameline.strip!
+        SUBPACKAGE_TAGS.each { |i| fill_tag(i, subpkg, pick_tags(s)) }
+        DEPENDENCY_TAGS.each { |i| fill_dependency(i, subpkg, s) }
+        subpkg.description = RPMSpec::Description.new(s).parse
+        subpkg.files = RPMSpec::Filelist.new(s).files
+        subpkg
+      end
+    end
+
+    def fill_dependency(tag, ostruct,text=@text)
+      ostruct[tag.downcase] = RPMSpec::Dependency.new(dependency_tags(tag,text)).parse(tag)
     end
 
     def fill_tag(tag, ostruct, arr)
       ostruct[tag.downcase] = arr[tag.to_sym]
     end
 
-    def pick_tags
+    def pick_tags(text)
       tags = {}
-      @text.split("\n").select! { |i| i =~ /^[A-Z].*?:/ }.each do |j|
+      text.split("\n").select! { |i| i =~ /^[A-Z].*?:/ }.each do |j|
         next if j =~ /^(Source|Patch|BuildRequires|Requires|Provides|Obsoletes|Conflicts|Recommends|Suggests|Supplements)/
         key = j.match(/^[A-Z].*?:/)[0].sub(':', '')
         value = j.match(/:.*$/)[0].sub(':', '').strip!
@@ -67,9 +78,9 @@ module RPMSpec
     end
 
     # find texts contains specified tags and conditional tags
-    def dependency_tags(tag)
+    def dependency_tags(tag, text)
       # break specfile to lines
-      arr = @text.split("\n")
+      arr = text.split("\n")
       tags = []
       line_numbers = []
       # loop the lines
