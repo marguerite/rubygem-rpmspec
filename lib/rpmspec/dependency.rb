@@ -5,16 +5,12 @@ module RPMSpec
       @struct = Struct.new(:name, :conditionals)
     end
 
-    def buildrequires?
-      @text.index('BuildRequires') ? true : false
-    end
-
     def buildrequires
       parse('BuildRequires')
     end
 
-    def requires?
-      @text.index(/\nRequires:/) ? true : false
+    def tag?(tag)
+      @text =~ /^#{tag}:.*\n/ ? true : false
     end
 
     def requires
@@ -38,7 +34,7 @@ module RPMSpec
     private
 
     def parse(tag)
-      return unless eval(tag.downcase + '?')
+      return unless tag?(tag)
       s = @text.dup
       # the conditional tags
       conditionals = s.scan(/%if.*?%endif/m)
