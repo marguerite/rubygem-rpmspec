@@ -39,7 +39,7 @@ module RPMSpec
       arr.map! do |s|
         subpkg = OpenStruct.new
         nameline = s.match(/%package(.*?)\n/)[1]
-        subpkg.name = nameline =~ /-n/ ? nameline.sub!('-n','').strip! : nameline.strip!
+        subpkg.name = nameline =~ /-n/ ? nameline.sub!('-n', '').strip! : nameline.strip!
         SUBPACKAGE_TAGS.each { |i| fill_tag(i, subpkg, pick_tags(s)) }
         DEPENDENCY_TAGS.each { |i| fill_dependency(i, subpkg, s) }
         subpkg.description = RPMSpec::Description.new(s).parse
@@ -48,8 +48,8 @@ module RPMSpec
       end
     end
 
-    def fill_dependency(tag, ostruct,text=@text)
-      ostruct[tag.downcase] = RPMSpec::Dependency.new(dependency_tags(tag,text)).parse(tag)
+    def fill_dependency(tag, ostruct, text = @text)
+      ostruct[tag.downcase] = RPMSpec::Dependency.new(dependency_tags(tag, text)).parse(tag)
     end
 
     def fill_tag(tag, ostruct, arr)

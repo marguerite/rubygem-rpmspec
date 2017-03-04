@@ -5,7 +5,7 @@ module RPMSpec
     end
 
     def parse
-      @match[0].sub!(@match[1], '').sub!(/%description.*?\n/,'')
+      @match[0].sub!(@match[1], '').sub!(/%description.*?\n/, '')
     end
   end
 end
