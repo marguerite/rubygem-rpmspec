@@ -1,8 +1,7 @@
 module RPMSpec
   class Preamble
     def initialize(text)
-      @text = text
-      @arr = @text.split("\n")
+      @arr = text.split("\n")
     end
 
     def parse
@@ -13,11 +12,6 @@ module RPMSpec
       end
       return if preamble.reject(&:empty?).empty?
       RPMSpec.arr_to_s(preamble)
-    end
-
-    def strip
-      str = parse.nil? ? '' : parse
-      @text.sub(str, '')
     end
   end
 end

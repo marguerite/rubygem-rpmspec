@@ -4,20 +4,36 @@ module RPMSpec
       raise RPMSpec::Exception, 'specfile not found.' unless File.exist?(file)
       text = open(file, 'r:UTF-8').read
       @subpackages = RPMSpec::SubPackage.new(text).subpackages
-      text = RPMSpec::SubPackage.new(text).strip
+      @text = RPMSpec::SubPackage.new(text).strip
       @scriptlets = if RPMSpec::Scriptlet.new(text).scriptlets?
                       RPMSpec::Scriptlet.new(text).scriptlets
                     end
-      @text = RPMSpec::Scriptlet.new(text).strip
+      @specfile = Struct.new(:preamble, :macros, :name, :version, :release,
+                             :license, :group, :url, :summary, :description,
+                             :sources, :patches,
+                             :buildrequires, :requires, :provides, :obsoletes,
+                             :conflicts, :buildroot, :buildarch, :prep, :build,
+                             :install, :check, :scriptlets, :files, :changelog)
     end
 
     def parse
-      text = @text.dup
-      text = RPMSpec::Source.new(text).strip
-      text = RPMSpec::Patch.new(text).strip
-      text = RPMSpec::Preamble.new(text).strip
+      preamble = RPMSpec::Preamble.new(@text).parse
+      macros = RPMSpec::Macro.new(@text).parse
+      buildrequires = RPMSpec::Dependency.new(dependency_tags('BuildRequires')).buildrequires
+      requires = RPMSpec::Dependency.new(dependency_tags('Requires')).requires
+      sources = RPMSpec::Source.new(@text).sources
+      patches = RPMSpec::Patch.new(@text).patches
       init_stages
-      Prep.new.parse + Build.new.parse + Install.new.parse
+      prep = Prep.new.parse
+      build = Build.new.parse
+      install = Install.new.parse
+      check = Check.new.parse
+      scriptlets = @scriptlets
+      if @text =~ /%files/
+        filesobj = RPMSpec::Filelist.new(@text)
+        files = filesobj.files
+      end
+      changelog = RPMSpec::Changelog.new(@text).entries
     end
 
     # create classes for stages
@@ -31,9 +47,9 @@ module RPMSpec
     end
 
     # find texts contains specified tags and conditional tags
-    def dependency_tags(tag, text = @text)
+    def dependency_tags(tag)
       # break specfile to lines
-      arr = text.split("\n")
+      arr = @text.split("\n")
       tags = []
       line_numbers = []
       # loop the lines
