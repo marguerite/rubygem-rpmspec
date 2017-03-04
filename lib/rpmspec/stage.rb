@@ -14,18 +14,15 @@ module RPMSpec
       Object.const_set(name.capitalize,
         Class.new do
           define_method :parse do
+            # arr_start.zero? indicates we didn't have
+            # this stage.
+            return if arr_start.zero?
             arr = ['%' + name]
             text.split("\n")[arr_start + 1..-1].each do |i|
               break if i =~ regex
               arr << i
             end
-            return if arr.reject(&:empty?).empty?
             RPMSpec.arr_to_s(arr)
-          end
-
-          define_method :strip do
-            str = parse.nil? ? '' : parse
-            text.sub(str, '')
           end
 
           define_method :arr_start do
