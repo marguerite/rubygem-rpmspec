@@ -35,6 +35,24 @@ module RPMSpec
         files = filesobj.files
       end
       changelog = RPMSpec::Changelog.new(@text).entries
+      tags = pick_tags
+      @specfile.new(preamble,macros,tags[:name],tags[:version],tags[:release],
+                    tags[:license],tags[:group], tags[:url], tags[:summary],
+                    description, sources, patches, buildrequires, requires,
+                    nil, nil, nil, tags[:buildroot], tags[:buildarch], prep,
+                    build, install, check, scriptlets, files, changelog)
+    end
+
+    def pick_tags
+      tags = {}
+      @text.split("\n").select! {|i| i =~ /^[A-Z].*?:/}.each do |j|
+        unless j =~ /^(Source|Patch|BuildRequires|Requires|Provides|Obsoletes|Conflicts|Recommends|Suggests|Supplements)/
+          key = j.match(/^[A-Z].*?:/)[0].sub(':','').downcase!
+          value = j.match(/:.*$/)[0].sub(':','').strip!
+          tags[key.to_sym] = value
+        end
+      end
+      tags
     end
 
     # create classes for stages
