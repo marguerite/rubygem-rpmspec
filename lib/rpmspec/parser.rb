@@ -1,3 +1,5 @@
+require 'ostruct'
+
 module RPMSpec
   class Parser
     def initialize(file)
@@ -5,52 +7,51 @@ module RPMSpec
       text = open(file, 'r:UTF-8').read
       @subpackages = RPMSpec::SubPackage.new(text).subpackages
       @text = RPMSpec::SubPackage.new(text).strip
-      @scriptlets = if RPMSpec::Scriptlet.new(text).scriptlets?
-                      RPMSpec::Scriptlet.new(text).scriptlets
-                    end
-      @specfile = Struct.new(:preamble, :macros, :name, :version, :release,
-                             :license, :group, :url, :summary, :description,
-                             :sources, :patches,
-                             :buildrequires, :requires, :provides, :obsoletes,
-                             :conflicts, :buildroot, :buildarch, :prep, :build,
-                             :install, :check, :scriptlets, :files, :changelog)
     end
 
     def parse
-      preamble = RPMSpec::Preamble.new(@text).parse
-      macros = RPMSpec::Macro.new(@text).parse
-      buildrequires = RPMSpec::Dependency.new(dependency_tags('BuildRequires')).buildrequires
-      requires = RPMSpec::Dependency.new(dependency_tags('Requires')).requires
-      sources = RPMSpec::Source.new(@text).sources
-      patches = RPMSpec::Patch.new(@text).patches
-      description = RPMSpec::Description.new(@text).parse
       init_stages
-      prep = Prep.new.parse
-      build = Build.new.parse
-      install = Install.new.parse
-      check = Check.new.parse
-      scriptlets = @scriptlets
+      tags = pick_tags
+
+      specfile = OpenStruct.new
+      specfile.preamble = RPMSpec::Preamble.new(@text).parse
+      specfile.macros = RPMSpec::Macro.new(@text).parse
+      DEPENDENCY_TAGS.each { |i| fill_dependency(i, specfile) }
+      specfile.sources = RPMSpec::Source.new(@text).sources
+      specfile.patches = RPMSpec::Patch.new(@text).patches
+      specfile.description = RPMSpec::Description.new(@text).parse
+      specfile.prep = Prep.new.parse
+      specfile.build = Build.new.parse
+      specfile.install = Install.new.parse
+      specfile.check = Check.new.parse
+      specfile.scriptlets = RPMSpec::Scriptlet.new(@text).scriptlets if RPMSpec::Scriptlet.new(@text).scriptlets?
       if @text =~ /%files/
         filesobj = RPMSpec::Filelist.new(@text)
-        files = filesobj.files
+        specfile.files = filesobj.files
       end
-      changelog = RPMSpec::Changelog.new(@text).entries
-      tags = pick_tags
-      @specfile.new(preamble,macros,tags[:name],tags[:version],tags[:release],
-                    tags[:license],tags[:group], tags[:url], tags[:summary],
-                    description, sources, patches, buildrequires, requires,
-                    nil, nil, nil, tags[:buildroot], tags[:buildarch], prep,
-                    build, install, check, scriptlets, files, changelog)
+      specfile.changelog = RPMSpec::Changelog.new(@text).entries
+      SINGLE_TAGS.each { |i| fill_tag(i, specfile, tags) }
+      p @subpackages
+      specfile
+    end
+
+    private
+
+    def fill_dependency(tag, ostruct)
+      ostruct[tag.downcase] = RPMSpec::Dependency.new(dependency_tags(tag)).parse(tag)
+    end
+
+    def fill_tag(tag, ostruct, arr)
+      ostruct[tag.downcase] = arr[tag.to_sym]
     end
 
     def pick_tags
       tags = {}
-      @text.split("\n").select! {|i| i =~ /^[A-Z].*?:/}.each do |j|
-        unless j =~ /^(Source|Patch|BuildRequires|Requires|Provides|Obsoletes|Conflicts|Recommends|Suggests|Supplements)/
-          key = j.match(/^[A-Z].*?:/)[0].sub(':','').downcase!
-          value = j.match(/:.*$/)[0].sub(':','').strip!
-          tags[key.to_sym] = value
-        end
+      @text.split("\n").select! { |i| i =~ /^[A-Z].*?:/ }.each do |j|
+        next if j =~ /^(Source|Patch|BuildRequires|Requires|Provides|Obsoletes|Conflicts|Recommends|Suggests|Supplements)/
+        key = j.match(/^[A-Z].*?:/)[0].sub(':', '')
+        value = j.match(/:.*$/)[0].sub(':', '').strip!
+        tags[key.to_sym] = value
       end
       tags
     end
@@ -84,17 +85,33 @@ module RPMSpec
         # previous line.
         # The insert order to the tags array is important
         # because we form text later using this order.
-        if index > 0 && !line_numbers.include?(index - 1) && arr[index - 1].start_with?('%')
-          line_numbers << index - 1
-          tags << arr[index - 1]
+        if index > 0 && !line_numbers.include?(index - 1) && arr[index - 1] =~ /^%(if|else|endif)/
+          # the 'endif' before the first tag is useless
+          unless tags.empty? && arr[index - 1].start_with?('%endif')
+            line_numbers << index - 1
+            tags << arr[index - 1]
+          end
         end
         tags << l
-        if (index < arr.size - 1) && !line_numbers.include?(index + 1) && arr[index + 1].start_with?('%')
+        next unless (index < arr.size - 1) && !line_numbers.include?(index + 1) && arr[index + 1] =~ /^%(if|else|endif)/
+        # the 'if' after the last tag is also useless
+        unless index == last_tag(tag, arr) && arr[index + 1].start_with?('%if')
           line_numbers << index + 1
           tags << arr[index + 1]
         end
       end
       RPMSpec.arr_to_s(tags)
+    end
+
+    def last_tag(tag, arr)
+      index = 0
+      arr.reverse.each_with_index do |i, j|
+        if i.start_with?(tag)
+          index = arr.size - 1 - j
+          break
+        end
+      end
+      index
     end
   end
 end

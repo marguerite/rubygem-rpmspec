@@ -4,16 +4,12 @@ module RPMSpec
       @text = text
     end
 
-    def buildrequires
-      parse('BuildRequires')
-    end
-
     def tag?(tag)
       @text =~ /^#{tag}:.*\n/ ? true : false
     end
 
-    def requires
-      parse('Requires')
+    def parse(tag)
+      parse_tag(tag)
     end
 
     def self.to_s(arr, tag)
@@ -40,7 +36,7 @@ module RPMSpec
 
     private
 
-    def parse(tag)
+    def parse_tag(tag)
       return unless tag?(tag)
       s = @text.dup
       # the conditional tags
