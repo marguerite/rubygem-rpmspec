@@ -1,4 +1,3 @@
 * add Provides/Obsoletes/Conflicts/Recommends
 * there might be multiple items in one BuildRequires line
 * there might be version in BuildRequires line
-* Requires(postun)

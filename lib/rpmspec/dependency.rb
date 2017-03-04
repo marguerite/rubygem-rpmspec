@@ -2,7 +2,6 @@ module RPMSpec
   class Dependency
     def initialize(text)
       @text = text
-      @struct = Struct.new(:name, :conditionals)
     end
 
     def buildrequires
@@ -21,10 +20,18 @@ module RPMSpec
       str = ''
       arr.each do |s|
         if s.conditionals.nil?
-          str << tag + ":\s\s" + s.name + "\n"
+          if s.modifier.nil?
+            str << "#{tag}:\s\s#{s.name}\n"
+          else
+            str << "#{tag}(#{s.modifier}):\s\s#{s.name}\n"
+          end
         else
           s.conditionals.each { |i| str << "%if\s" + i + "\n" }
-          str << tag + ":\s\s" + s.name + "\n"
+          if s.modifier.nil?
+            str << "#{tag}:\s\s#{s.name}\n"
+          else
+            str << "#{tag}(#{s.modifier}):\s\s#{s.name}\n"
+          end
           s.conditionals.size.times { str << "%endif\n" }
         end
       end
@@ -38,16 +45,21 @@ module RPMSpec
       s = @text.dup
       # the conditional tags
       conditionals = s.scan(/%if.*?%endif/m)
-      # the normal tags
+      # strip condtional tags' contents
       conditionals.each { |i| s.sub!(i, '') } unless conditionals.empty?
-      normals = s.split("\n").reject(&:empty?)
-                 .map! { |i| @struct.new(i.sub!(tag + ':', '').strip!, nil) }
+      tag_struct = Struct.new(:name, :conditionals, :modifier)
+      normals = s.split("\n").reject(&:empty?).map! do |i|
+                  # modifier: modifier to the tag, eg Requires(post)
+                  modifier = Regexp.last_match(1) if i.match(/\((.*)\)/)
+                  tag_struct.new(i.sub!(/#{tag}.*?:/, '').strip!, nil, modifier)
+                end
       return normals if conditionals.empty?
       conds = []
       conditionals.each do |i|
         RPMSpec::Conditional.new(i).parse.each do |j|
-          j.name.sub!(tag + ':', '').strip!
-          conds << j
+          modifier = Regexp.last_match(1) if j.name.match(/\((.*)\)/)
+          name = j.name.sub!(/#{tag}.*?:/, '').strip!
+          conds << tag_struct.new(name, j.conditionals, modifier)
         end
       end
       normals + conds

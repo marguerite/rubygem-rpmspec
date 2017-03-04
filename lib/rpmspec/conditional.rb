@@ -51,10 +51,10 @@ module RPMSpec
     end
 
     # find the conditionals that matches the item
-    def find_conditional(item, text = @text)
+    def find_conditional(item)
       conditionals = []
       # match every text before the item
-      copy = text.match(/.*#{item}\n/m)[0]
+      copy = @text.match(/.*#{Regexp.escape(item)}\n/m)[0]
       # break the text into lines
       arr = copy.split("\n")
       # match the nearest condtional before it
