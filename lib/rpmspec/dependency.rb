@@ -47,19 +47,43 @@ module RPMSpec
       conditionals = s.scan(/%if.*?%endif/m)
       # strip condtional tags' contents
       conditionals.each { |i| s.sub!(i, '') } unless conditionals.empty?
-      tag_struct = Struct.new(:name, :conditionals, :modifier)
-      normals = s.split("\n").reject(&:empty?).map! do |i|
+      tag_struct = Struct.new(:name, :version, :conditionals, :modifier)
+      normals = []
+      s.split("\n").reject(&:empty?).each do |i|
                   # modifier: modifier to the tag, eg Requires(post)
                   modifier = Regexp.last_match(1) if i.match(/\((.*)\)/)
-                  tag_struct.new(i.sub!(/#{tag}.*?:/, '').strip!, nil, modifier)
-                end
+                  content = i.sub!(/#{tag}.*?:/, '').strip!
+                  if content.match(/(>|=|<).*$/)
+                    # have an expression Requires: abc > 1.0.0
+                    version = Regexp.last_match(0)
+                    name = content.sub!(version, '').strip!
+                    normals << tag_struct.new(name,version,nil,modifier)
+                  elsif content.match(/\s+/)
+                    # multiple entries in one line: Requires: example example1
+                    content.split(/\s+/).each do |j|
+                      normals << tag_struct.new(j, nil, nil, modifier)
+                    end
+                  else
+                    normals << tag_struct.new(content, nil, nil, modifier)
+                  end
+      end
       return normals if conditionals.empty?
       conds = []
       conditionals.each do |i|
         RPMSpec::Conditional.new(i).parse.each do |j|
           modifier = Regexp.last_match(1) if j.name.match(/\((.*)\)/)
-          name = j.name.sub!(/#{tag}.*?:/, '').strip!
-          conds << tag_struct.new(name, j.conditionals, modifier)
+          content = j.name.sub!(/#{tag}.*?:/, '').strip!
+          if content.match(/(>|=|<).*$/)
+            version = Regexp.last_match(0)
+            name = content.sub!(version, '').strip!
+            conds << tag_struct.new(name, version, j.conditionals, modifier)
+          elsif content.match(/\s+/)
+            content.split(/\s+/).each do |k|
+              conds << tag_struct.new(k, nil, j.conditionals, modifier)
+            end
+          else
+            conds << tag_struct.new(content, nil, j.conditionals, modifier)
+          end
         end
       end
       normals + conds
