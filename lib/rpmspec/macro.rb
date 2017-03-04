@@ -1,7 +1,7 @@
 module RPMSpec
   class Macro
     def initialize(text)
-      @arr = text.split("\n").select {|i| i =~ /^%(define|global|{!\?)/}
+      @arr = text.split("\n").select { |i| i =~ /^%(define|global|{!\?)/ }
       @struct = Struct.new(:indicator, :name, :expression, :test)
     end
 

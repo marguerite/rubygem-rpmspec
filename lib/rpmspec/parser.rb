@@ -23,6 +23,7 @@ module RPMSpec
       requires = RPMSpec::Dependency.new(dependency_tags('Requires')).requires
       sources = RPMSpec::Source.new(@text).sources
       patches = RPMSpec::Patch.new(@text).patches
+      description = RPMSpec::Description.new(@text).parse
       init_stages
       prep = Prep.new.parse
       build = Build.new.parse
