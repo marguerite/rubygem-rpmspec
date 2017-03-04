@@ -15,15 +15,7 @@ module RPMSpec
       end
     end
 
-    def strip
-      line_numbers = []
-      @arr.each_with_index do |i, j|
-        line_numbers << j if i =~ /^Source(\d+)?:/
-      end
-      RPMSpec.arr_to_s(@arr[0..line_numbers[0] - 1]) + RPMSpec.arr_to_s(@arr[line_numbers[-1] + 1..-1])
-    end
-
-    def self.to_s(arr)
+    def inspect(arr)
       str = ''
       arr.each { |s| str << 'Source' + s.number.to_s + ":\s\s" + s.url + "\n" }
       str

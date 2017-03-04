@@ -31,7 +31,7 @@ module RPMSpec
       structs
     end
 
-    def self.to_s(arr)
+    def inspect(arr)
       return '%changelog' if arr.nil?
       str = "%changelog\n"
       arr.each do |s|

@@ -31,25 +31,7 @@ module RPMSpec
       scriptlets
     end
 
-    def strip
-      unpaired = unpaired_conditionals
-      # empty unpaired indicates the scriptlet is self-closed.
-      # just use the normal skip
-      return RPMSpec.arr_to_s(@arr[0..first_tag - 1]) + RPMSpec.arr_to_s(@arr[last_tag + 1..-1]) if unpaired.empty?
-      if_counts = find_if_counts(unpaired)
-      endif_counts = find_endif_counts(unpaired)
-      last_if = @arr.index(beginning_ifs(if_counts)[-1])
-      last_endif = furthest_endif(endif_counts)
-      if @arr[last_if..first_tag].reject!(&:empty?).size > 2
-        before = RPMSpec.arr_to_s(@arr[0..first_tag - 1])
-        after = RPMSpec.arr_to_s(@arr[last_endif + 1..-1])
-        before + print_n_endif(if_counts) + after
-      else
-        @text
-      end
-    end
-
-    def self.to_s(arr)
+    def inspect(arr)
       str = ''
       arr.each do |s|
         if s.conditionals.nil?

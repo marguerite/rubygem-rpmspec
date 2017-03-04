@@ -3,7 +3,7 @@ module RPMSpec
     def initialize(text)
       @text = text.match(/%files.*?(\n\n|\z)/m)[0].sub!('%files', '')
       @arr = @text.split("\n").reject(&:empty?)
-      @cat = Struct.new(:defattr, :dir, :doc, :config, :file, :list)
+      @types = Struct.new(:defattr, :dir, :doc, :config, :file, :list)
       @file = Struct.new(:file, :permission, :user, :group, :dirpermission, :ghost)
       @defattr = Struct.new(:permission, :user, :group, :dirpermission)
     end
@@ -21,7 +21,7 @@ module RPMSpec
 
       # only one line, usually it indicates every file this package provides
       # is provided via an appended list.
-      return @cat.new(nil, nil, nil, nil, nil, list) if @arr.size == 1
+      return @types.new(nil, nil, nil, nil, nil, list) if @arr.size == 1
 
       # ensure @arr[0] is '%defattr(-,root,root)'
       @arr = @arr[1..-1] if @arr[0] =~ /^[^%]/
@@ -30,33 +30,33 @@ module RPMSpec
       permission, user, group, dirpermission = attributes
       defattr = @defattr.new(permission, user, group, dirpermission)
 
-      # initialize categories
-      files = { dir: [], doc: [], config: [], file: [] }
+      # initialize file types
+      types = { dir: [], doc: [], config: [], file: [] }
 
       @arr[1..-1].each do |i|
         a = i.split(/\s+/)
         if i.start_with?('%doc') && a.size > 2
           # '%doc README COPYING' fit this
           a[1..-1].each do |j|
-            files[:doc] << @file.new(j, permission, user, group, dirpermission, false)
+            types[:doc] << @file.new(j, permission, user, group, dirpermission, false)
           end
         else
           fileattr = find_attr(a)
-          cat = find_category(a).sub!('%', '')
+          type = find_type(a).sub!('%', '')
           f = find_file(a)
           ghost = ghost?(i)
           if fileattr.nil?
-            files[cat.to_sym] << @file.new(f, permission, user, group, dirpermission, ghost)
+            types[type.to_sym] << @file.new(f, permission, user, group, dirpermission, ghost)
           else
-            files[cat.to_sym] << @file.new(f, fileattr.permission, fileattr.user, fileattr.group, fileattr.dirpermission, ghost)
+            types[type.to_sym] << @file.new(f, fileattr.permission, fileattr.user, fileattr.group, fileattr.dirpermission, ghost)
           end
         end
       end
 
-      @cat.new(defattr, files[:dir], files[:doc], files[:config], files[:file], list)
+      @types.new(defattr, types[:dir], types[:doc], types[:config], types[:file], list)
     end
 
-    def to_s(struct, name = nil)
+    def inspect(struct, name = nil)
       str = ''
       unless struct.list.empty?
         str << (name.nil? ? '%files' : "%files #{name}")
@@ -65,20 +65,20 @@ module RPMSpec
       end
       return str if struct.defattr.nil?
       str << build_attr(struct.defattr, true)
-      str << file_to_str('dir', struct.dir, struct.defattr)
-      str << file_to_str('doc', struct.doc, struct.defattr)
-      str << file_to_str('config', struct.config, struct.defattr)
-      str << file_to_str('file', struct.file, struct.defattr)
+      str << type_to_str('dir', struct.dir, struct.defattr)
+      str << type_to_str('doc', struct.doc, struct.defattr)
+      str << type_to_str('config', struct.config, struct.defattr)
+      str << type_to_str('file', struct.file, struct.defattr)
       str
     end
 
     private
 
-    def file_to_str(cat, arr, defattr)
+    def type_to_str(type, arr, defattr)
       str = ''
       arr.each do |s|
         str << "%ghost\s" if s.ghost
-        str << '%' + cat + "\s" unless cat == 'file'
+        str << '%' + type + "\s" unless type == 'file'
         unless s.permission == defattr.permission &&
                s.user == defattr.user &&
                s.group == defattr.group &&
@@ -104,13 +104,13 @@ module RPMSpec
       file =~ /%ghost/ ? true : false
     end
 
-    def find_category(arr)
-      cat = []
+    def find_type(arr)
+      type = []
       arr.each do |i|
-        cat << i if i =~ %r{^%(?!(attr|ghost))[^/]+$}
+        type << i if i =~ %r{^%(?!(attr|ghost))[^/]+$}
       end
-      # in case two category in one line, just use the first
-      cat.empty? ? '%file' : cat[0]
+      # in case two types in one line, just use the first
+      type.empty? ? '%file' : type[0]
     end
 
     def find_file(arr)

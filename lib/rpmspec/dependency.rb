@@ -12,7 +12,7 @@ module RPMSpec
       parse_tag(tag)
     end
 
-    def self.to_s(arr, tag)
+    def inspect(arr, tag)
       str = ''
       arr.each do |s|
         if s.conditionals.nil?

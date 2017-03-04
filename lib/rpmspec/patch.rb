@@ -19,17 +19,7 @@ module RPMSpec
       patches
     end
 
-    def strip
-      pa = patches
-      newtext = @text.dup
-      pa.each do |s|
-        newtext.sub!(/^Patch(\d+)?:\s+#{s.name}\n/, '')
-        newtext.sub!(/#{s.comment}/, '')
-      end
-      newtext
-    end
-
-    def self.to_s(arr)
+    def inspect(arr)
       str = ''
       arr.each do |s|
         str << s.comment.strip + "\n" unless s.comment.nil?

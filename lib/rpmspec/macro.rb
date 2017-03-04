@@ -17,7 +17,7 @@ module RPMSpec
       end
     end
 
-    def to_s(arr)
+    def inspect(arr)
       str = ''
       arr.each do |i|
         str << "%{!?#{i.name}:\s" if i.test
