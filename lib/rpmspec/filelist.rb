@@ -1,27 +1,30 @@
+require 'ostruct'
+
 module RPMSpec
   class Filelist
     def initialize(text)
       @text = text.match(/%files.*?(\n\n|\z)/m)[0].sub!('%files', '')
       @arr = @text.split("\n").reject(&:empty?)
-      @types = Struct.new(:defattr, :dir, :doc, :config, :file, :list)
       @file = Struct.new(:file, :permission, :user, :group, :dirpermission, :ghost)
       @defattr = Struct.new(:permission, :user, :group, :dirpermission)
     end
 
     def files
+      files = OpenStruct.new
+
       # if filelist appended
-      list = []
       unless @arr[0] =~ /^%defattr/
         # it's a subpackage, with '%files name (-f name.lang)?'
         a1 = @arr[0].strip.split("\s")
         a1.each_with_index do |i, j|
-          list << a1[j + 1] if i == '-f'
+          files.list ||= []
+          files.list << a1[j + 1] if i == '-f'
         end
       end
 
       # only one line, usually it indicates every file this package provides
       # is provided via an appended list.
-      return @types.new(nil, nil, nil, nil, nil, list) if @arr.size == 1
+      return files if @arr.size == 1
 
       # ensure @arr[0] is '%defattr(-,root,root)'
       @arr = @arr[1..-1] if @arr[0] =~ /^[^%]/
@@ -29,31 +32,31 @@ module RPMSpec
       attributes = @arr[0].sub(/%defattr\((.*)\)/) { Regexp.last_match(1) }.split(',')
       permission, user, group, dirpermission = attributes
       defattr = @defattr.new(permission, user, group, dirpermission)
-
-      # initialize file types
-      types = { dir: [], doc: [], config: [], file: [] }
+      files.defattr = defattr
 
       @arr[1..-1].each do |i|
         a = i.split(/\s+/)
         if i.start_with?('%doc') && a.size > 2
           # '%doc README COPYING' fit this
           a[1..-1].each do |j|
-            types[:doc] << @file.new(j, permission, user, group, dirpermission, false)
+            types.doc ||= []
+            types.doc << @file.new(j, permission, user, group, dirpermission, false)
           end
         else
           fileattr = find_attr(a)
           type = find_type(a).sub!('%', '')
           f = find_file(a)
           ghost = ghost?(i)
+          files[type.to_sym] ||= []
           if fileattr.nil?
-            types[type.to_sym] << @file.new(f, permission, user, group, dirpermission, ghost)
+            files[type.to_sym] << @file.new(f, permission, user, group, dirpermission, ghost)
           else
-            types[type.to_sym] << @file.new(f, fileattr.permission, fileattr.user, fileattr.group, fileattr.dirpermission, ghost)
+            files[type.to_sym] << @file.new(f, fileattr.permission, fileattr.user, fileattr.group, fileattr.dirpermission, ghost)
           end
         end
       end
 
-      @types.new(defattr, types[:dir], types[:doc], types[:config], types[:file], list)
+      files
     end
 
     def inspect(struct, name = nil)
