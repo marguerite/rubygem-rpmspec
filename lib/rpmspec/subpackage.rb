@@ -28,7 +28,7 @@ module RPMSpec
         s_name = s.match(/%package.*?\n/)[0].sub('%package', '').sub('-n', '').strip!
         # use single line match to find '%description devel'
         s_desc_start = @text.match(/%description.*?#{s_name}/)[0]
-        s_desc = @text.match(/#{s_desc_start}[^%]*\n\n/m)[0]
+        s_desc = @text.match(/#{s_desc_start}.*?\n\n/m)[0]
         # use single line match to find "%file devel"
         s_file_start = @text.match(/%file.*?#{s_name}/)[0]
         s_file = @text.match(/#{s_file_start}.*?\n\n/m)[0]
