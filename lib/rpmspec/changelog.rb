@@ -9,26 +9,26 @@ module RPMSpec
       # @text and @arr not to be nil too early
       @text = text.match(/%changelog.*\z/m)[0].sub('%changelog', '')
       @arr = @text.sub("\n", '').split("\n\n")
-      @struct = Struct.new(:modification_time, :version, :packager, :email, :changes)
+      @newchange = Struct.new(:modification_time, :version, :packager, :email, :changes)
     end
 
     def entries
       # because we want it nil here
       return if @arr.empty?
-      structs = []
+      changes ||= []
       @arr.each do |entry|
         head = entry.split("\n")[0]
         others = entry.sub(head, '')
         items = others.split("\n-").reject!(&:empty?).map!(&:strip!)
-        a = head.split("\n")
+        a = head.split("\s")
         # *, Sat, Apr, 25, 2015, John, Doe, <example@example.com>, -, 4.2.8.6-1
         time = Time.new(a[4], Date::ABBR_MONTHNAMES.index(a[2]), a[3])
-        packager = a[5] + "\s" + a[6]
-        email = a[7][1..-2]
-        version = a[9]
-        structs = @struct.new(time, version, packager, email, items)
+        packager = head.match(/#{a[4]}(.*)</)[1].strip!
+        email = head.match(/<(.*)>/)[1]
+        version = head.match(/\d+\.\d+\.\d+.*$/)[0]
+        changes << @newchange.new(time, version, packager, email, items)
       end
-      structs
+      changes
     end
 
     def inspect(arr)
