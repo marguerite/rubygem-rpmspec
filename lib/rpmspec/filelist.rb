@@ -29,7 +29,7 @@ module RPMSpec
       # ensure @arr[0] is '%defattr(-,root,root)'
       @arr = @arr[1..-1] if @arr[0] =~ /^[^%]/
       # default file attributes (defattr)
-      attributes = @arr[0].sub(/%defattr\((.*)\)/) { Regexp.last_match(1) }.split(',')
+      attributes = @arr[0].sub(/%defattr\((.*)\)/) { Regexp.last_match(1) }.split(',') if @arr[0] =~ /^%defattr/
       permission, user, group, dirpermission = attributes
       defattr = @defattr.new(permission, user, group, dirpermission)
       files.defattr = defattr
