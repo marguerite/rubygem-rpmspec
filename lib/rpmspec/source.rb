@@ -17,7 +17,7 @@ module RPMSpec
 
     def inspect(arr)
       str = ''
-      arr.each { |s| str << 'Source' + s.number.to_s + ":\s\s" + s.url + "\n" }
+      arr.each { |s| str << 'Source' + s.number.to_s + ":\t" + s.url + "\n" }
       str
     end
   end

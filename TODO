@@ -1,2 +1,3 @@
 * unit tests
 * a binary
+* stage.rb: can't initialize twice! !important

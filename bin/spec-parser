@@ -4,4 +4,4 @@ $LOAD_PATH.push(File.expand_path(File.dirname(__FILE__) + '/../lib'))
 
 require 'rpmspec'
 
-RPMSpec::Parser.new('kcm5-fcitx.spec').parse
+RPMSpec::Parser.new(ARGV[0]).parse
