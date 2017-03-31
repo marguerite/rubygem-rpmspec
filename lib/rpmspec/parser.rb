@@ -10,7 +10,6 @@ module RPMSpec
     end
 
     def parse
-      init_stages
       tags = pick_tags(@text)
 
       specfile = OpenStruct.new
@@ -20,10 +19,10 @@ module RPMSpec
       specfile.sources = RPMSpec::Source.new(@text).sources
       specfile.patches = RPMSpec::Patch.new(@text).patches
       specfile.description = RPMSpec::Description.new(@text).parse
-      specfile.prep = Prep.new.parse
-      specfile.build = Build.new.parse
-      specfile.install = Install.new.parse
-      specfile.check = Check.new.parse
+      specfile.prep = RPMSpec::Stage.prep(/^%build/, @text)
+      specfile.build = RPMSpec::Stage.build(/^%install/, @text)
+      specfile.install = RPMSpec::Stage.install(/^%(post|pre$|preun|check|files|changelog)/, @text)
+      specfile.check = RPMSpec::Stage.check(/^%(post|pre$|preun|files|changelog)/, @text)
       specfile.scriptlets = RPMSpec::Scriptlet.new(@text).scriptlets if RPMSpec::Scriptlet.new(@text).scriptlets?
       specfile.files = RPMSpec::Filelist.new(@text).files if @text =~ /%files/
       specfile.subpackages = parse_subpackages(@subpackages)
@@ -65,16 +64,6 @@ module RPMSpec
         tags[key.to_sym] = value
       end
       tags
-    end
-
-    # create classes for stages
-    def init_stages
-      stage_struct = Struct.new(:class, :regex, :text)
-      s = [stage_struct.new('prep', /^%build/, @text),
-           stage_struct.new('build', /^%install/, @text),
-           stage_struct.new('install', /^%(post|pre$|preun|check|files|changelog)/, @text),
-           stage_struct.new('check', /^%(post|pre$|preun|files|changelog)/, @text)]
-      RPMSpec::Stage.new(s).create_stages
     end
 
     # find texts contains specified tags and conditional tags

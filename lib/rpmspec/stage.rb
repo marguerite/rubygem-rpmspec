@@ -1,41 +1,24 @@
 module RPMSpec
   class Stage
-    def initialize(structs)
-      @structs = structs
-    end
-
-    def create_stages
-      @structs.each do |struct|
-        create_stage(struct.class, struct.regex, struct.text)
+    class << self
+      def method_missing(stage, *args)
+        super unless [:prep, :build, :install, :check].include?(stage)
+        regex, text = args
+        start = 0
+        text_arr = text.split("\n")
+        text_arr.each_with_index { |i, j| start = j if i.start_with?('%' + stage.to_s) }
+        return if start.zero?
+        arr = ['%' + stage.to_s]
+        text_arr[start + 1..-1].each do |i|
+          break if i =~ regex
+          arr << i
+        end
+        RPMSpec.arr_to_s(arr)
       end
-    end
 
-    def create_stage(name, regex, text)
-      Object.const_set(name.capitalize,
-                       Class.new do
-                         define_method :parse do
-                           # arr_start.zero? indicates we didn't have
-                           # this stage.
-                           return if arr_start.zero?
-                           arr = ['%' + name]
-                           text.split("\n")[arr_start + 1..-1].each do |i|
-                             break if i =~ regex
-                             arr << i
-                           end
-                           RPMSpec.arr_to_s(arr)
-                         end
-
-                         define_method :arr_start do
-                           index = 0
-                           text.split("\n").each_with_index do |i, j|
-                             if i.start_with?('%' + name)
-                               index = j
-                               break
-                             end
-                           end
-                           index
-                         end
-                       end)
+      def respond_to_missing(stage)
+        [:prep, :build, :install, :check].include?(stage) || super
+      end
     end
   end
 end
