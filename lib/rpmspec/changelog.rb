@@ -51,7 +51,7 @@ module RPMSpec
     end
 
     def suse?
-      open('/etc/os-release', 'r:UTF-8').read.match(/^ID=(.*)$/)[1] == 'opensuse'
+      File.exist?('/usr/lib/rpm/suse_macros')
     end
 
     def entries_fedora
