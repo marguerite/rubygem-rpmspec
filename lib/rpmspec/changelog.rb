@@ -7,7 +7,6 @@ module RPMSpec
       # sub '%changelog' and "\n" separately to make sure
       # @text and @arr not to be nil too early
       @text = text.match(/%changelog.*\z/m)[0].sub('%changelog', '')
-      @arr = @text.sub("\n", '').split("\n\n")
     end
 
     def entries
@@ -21,30 +20,27 @@ module RPMSpec
     private
 
     def entries_suse
-      return if @arr.empty?
-      @arr.map! { |entry| entry =~ /^-+\n(.*)$/ ? Regexp.last_match(1) : entry }
-          .map! do |entry|
-            next if @arr.index(entry).odd?
-            item = OpenStruct.new
-            a, item.email = entry.split('-').map!(&:strip!)
-            # Sat Mar  5 08:31:20 UTC 2016
-            b = a.split("\s")
-            c = b[3].split(':')
-            item.modification_time = Time.new(b[5], Date::ABBR_MONTHNAMES.index(b[1]),
-                                              b[2], c[0], c[1], c[2], '+00:00')
-            item.changes = @arr[@arr.index(entry) + 1]
-            item
-          end.compact!
+      arr = @text.split("\n*").reject!(&:empty?).map!(&:strip!)
+      return if arr.empty?
+      arr.map! do |entry|
+        item = OpenStruct.new
+        a, item.changes = entry.split("\n")
+        # * Fri Mar 10 2017 axel.braun@gmx.de
+        b = a.split("\s")
+        item.modification_time = Time.new(b[3], Date::ABBR_MONTHNAMES.index(b[1]),
+                                          b[2], 0, 0, 0, '+00:00')
+        item.email = b[4]
+        item
+      end
     end
 
     def inspect_suse(arr)
       return '%changelog' if arr.nil?
       str = "%changelog\n"
       arr.each do |s|
-        head = "-------------------------------------------------------------------\n"
-        head << s.modification_time.strftime('%a %b %e %H:%M:%S UTC %Y - ')
-        head << s.email + "\n\n"
-        head << s.changes + "\n\n"
+        head = s.modification_time.strftime(' * %a %b %e %Y ')
+        head << s.email + "\n"
+        head << s.changes + "\n"
         str << head
       end
       str
@@ -55,9 +51,10 @@ module RPMSpec
     end
 
     def entries_fedora
+      arr = @text.sub("\n", '').split("\n\n")
       # because we want it nil here
-      return if @arr.empty?
-      @arr.map! do |entry|
+      return if arr.empty?
+      arr.map! do |entry|
         s = OpenStruct.new
         head = entry.split("\n")[0]
         others = entry.sub(head, '')
