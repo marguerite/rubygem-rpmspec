@@ -4,7 +4,7 @@ module RPMSpec
   # the struct is the term's name and the corresponding
   # conditionals that it matches.
   class Conditional
-    def initialize(text = @text)
+    def initialize(text)
       @text = add_levels(text)
       @struct = Struct.new(:name, :conditionals)
     end
@@ -152,7 +152,7 @@ module RPMSpec
     def reverse_condition(conditional)
       reverse_matrix = { '>' => '<=', '>=' => '<',
                          '<' => '>=', '<=' => '>',
-                         '=' => '!=' }
+                         '==' => '!=' }
       arr = conditional.strip.split(/\s+/)
       if arr.size > 1
         comparator = arr[1]
@@ -163,12 +163,18 @@ module RPMSpec
       end
     end
 
+    def reverse_comparator(comparator)
+      reverse_matrix = { '&&' => '||', '||' => '&&' }
+      reverse_matrix[comparator]
+    end
+
     def reverse_conditions(joined)
       if joined.index(/(&&|\|\|)/)
         # break the joined conditional into simple
         # conditionals and comparators
         conditionals, comparators = break_joined(joined)
         conditionals = conditionals.map! { |i| reverse_condition(i) }
+        comparators = comparators.map! { |j| reverse_comparator(j) }
         combine_joined(conditionals, comparators)
       else
         reverse_condition(joined)
