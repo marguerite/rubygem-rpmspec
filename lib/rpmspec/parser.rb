@@ -68,8 +68,8 @@ module RPMSpec
 
     # find texts contains specified tags and conditional tags
     def dependency_tags(tag, text)
-      # break specfile to lines
-      arr = text.split("\n")
+      # break specfile to lines and strip comments
+      arr = text.split("\n").reject! { |i| i.start_with?('#') }
       tags = []
       line_numbers = []
       # loop the lines
