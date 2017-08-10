@@ -52,7 +52,36 @@ module RPMSpec
     end
 
     def fill_tag(tag, ostruct, arr)
-      ostruct[tag.downcase] = arr[tag.to_sym]
+      ostruct[tag.downcase] = replace_tag_value(arr[tag.to_sym], arr, ostruct)
+    end
+
+    # it's common that new tag reuse old tags or self/system-defined macros
+    # in its definition, so we have to replace them with their actual values.
+    # tags: the tags array
+    # specfile: the specfile struct contains self-defined macros
+    def replace_tag_value(value, tags, specfile)
+      return value unless value =~ /%{.*}/
+      # replace reused tags first, eg:
+      # %{_tmppath}/%{name}-%{version}-build
+      arr = find_macros(value)
+      # ["_tmppath", "name", "version"]
+      reused = SINGLE_TAGS.map(&:downcase) & arr
+      reused.each { |r| value = value.gsub('%{' + r + '}', tags[r.capitalize.to_sym]) } unless reused.empty?
+      # then replace self-defined macros, eg:
+      # %{_tmppath}/tryton-sao-%{majorver}.5-build
+      macros = specfile.macros.map(&:name) & find_macros(value)
+      macros.each { |m| value = value.gsub('%{' + m + '}', macro_to_hash(specfile.macros)[m]) } unless macros.empty?
+      value
+    end
+
+    def find_macros(text)
+      text.split("%{").reject!(&:empty?).map! { |i| i.match(/(.*)}.*$/)[1] }
+    end
+
+    def macro_to_hash(macros)
+      h = Hash.new
+      macros.each { |i| h[i.name] = i.expression }
+      h
     end
 
     def pick_tags(text)
