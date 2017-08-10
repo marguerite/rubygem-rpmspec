@@ -69,6 +69,7 @@ module RPMSpec
       reused.each { |r| value = value.gsub('%{' + r + '}', tags[r.capitalize.to_sym]) } unless reused.empty?
       # then replace self-defined macros, eg:
       # %{_tmppath}/tryton-sao-%{majorver}.5-build
+      return value if specfile.macros.nil?
       macros = specfile.macros.map(&:name) & find_macros(value)
       macros.each { |m| value = value.gsub('%{' + m + '}', macro_to_hash(specfile.macros)[m]) } unless macros.empty?
       value
