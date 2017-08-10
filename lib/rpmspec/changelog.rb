@@ -6,7 +6,7 @@ module RPMSpec
     def initialize(text)
       # sub '%changelog' and "\n" separately to make sure
       # @text and @arr not to be nil too early
-      @text = text.match(/%changelog.*\z/m)[0].sub('%changelog', '')
+      @text = text.match(/%changelog.*\z/m)[0].sub('%changelog', '') unless text =~ /%changelog\n\n$/
     end
 
     def entries
@@ -20,6 +20,7 @@ module RPMSpec
     private
 
     def entries_suse
+      return if @text.nil?
       arr = @text.split("\n*").reject!(&:empty?).map!(&:strip!)
       return if arr.empty?
       arr.map! do |entry|
@@ -51,6 +52,7 @@ module RPMSpec
     end
 
     def entries_fedora
+      return if @text.nil?
       arr = @text.sub("\n", '').split("\n\n")
       # because we want it nil here
       return if arr.empty?
