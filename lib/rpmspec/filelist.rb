@@ -39,8 +39,8 @@ module RPMSpec
         if i.start_with?('%doc') && a.size > 2
           # '%doc README COPYING' fit this
           a[1..-1].each do |j|
-            types.doc ||= []
-            types.doc << @file.new(j, permission, user, group, dirpermission, false)
+            files.doc ||= []
+            files.doc << @file.new(j, permission, user, group, dirpermission, false)
           end
         else
           fileattr = find_attr(a)
