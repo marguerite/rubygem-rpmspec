@@ -1,17 +1,12 @@
 module RPMSpec
+  # parse RPM preamble, like legal notes, authors
   class Preamble
     def initialize(text)
-      @arr = text.split("\n")
+      @text = text
     end
 
     def parse
-      preamble = []
-      @arr.each do |i|
-        break unless i =~ /^#/ || i.empty?
-        preamble << i if i =~ /^#/ || i.empty?
-      end
-      return if preamble.reject(&:empty?).empty?
-      RPMSpec.arr_to_s(preamble)
+      @text.match(/\A((?!^%)(?!^Name).)*/m)[0]
     end
   end
 end

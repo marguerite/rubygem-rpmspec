@@ -10,7 +10,7 @@ module RPMSpec
     end
 
     def conditional?
-      @text.scan('%endif').empty? ? false : true
+      !@text.scan('%if').empty?
     end
 
     # parse conditional texts into an array of '@struct's

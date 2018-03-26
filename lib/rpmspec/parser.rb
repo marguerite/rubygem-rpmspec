@@ -3,7 +3,7 @@ require 'ostruct'
 module RPMSpec
   class Parser
     def initialize(file)
-      raise RPMSpec::Exception, 'specfile not found.' unless File.exist?(file)
+      raise 'specfile not found.' unless File.exist?(file)
       text = open(file, 'r:UTF-8').read
       @subpackages = RPMSpec::SubPackage.new(text).subpackages
       @text = RPMSpec::SubPackage.new(text).strip

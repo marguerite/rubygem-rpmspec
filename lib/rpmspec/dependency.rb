@@ -5,7 +5,7 @@ module RPMSpec
     end
 
     def tag?(tag)
-      @text =~ /^#{tag}:.*\n/ ? true : false
+      !@text.scan(/^#{tag}:[^\n]*?\n/).empty?
     end
 
     def parse(tag)
