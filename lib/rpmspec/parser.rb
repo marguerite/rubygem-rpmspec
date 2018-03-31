@@ -10,11 +10,13 @@ module RPMSpec
     end
 
     def parse
+      # TODO: remove
       tags = pick_tags(@text)
 
       specfile = OpenStruct.new
       specfile.preamble = RPMSpec::Preamble.new(@text).parse
       specfile.macros = RPMSpec::Macro.new(@text).parse
+      # TODO: remove
       DEPENDENCY_TAGS.each { |i| fill_dependency(i, specfile) }
       specfile.sources = RPMSpec::Source.new(@text).sources
       specfile.patches = RPMSpec::Patch.new(@text).patches
@@ -27,6 +29,7 @@ module RPMSpec
       specfile.files = RPMSpec::Filelist.new(@text).files if @text =~ /%files/
       specfile.subpackages = parse_subpackages(@subpackages)
       specfile.changelog = RPMSpec::Changelog.new(@text).entries
+      # TODO: remove
       SINGLE_TAGS.each { |i| fill_tag(i, specfile, tags) }
       specfile
     end
@@ -47,14 +50,17 @@ module RPMSpec
       end
     end
 
+    # remove
     def fill_dependency(tag, ostruct, text = @text)
       ostruct[tag.downcase] = RPMSpec::Dependency.new(dependency_tags(tag, text)).parse(tag)
     end
 
+    # remove
     def fill_tag(tag, ostruct, arr)
       ostruct[tag.downcase] = replace_tag_value(arr[tag.to_sym], arr, ostruct)
     end
 
+    # remove
     # it's common that new tag reuse old tags or self/system-defined macros
     # in its definition, so we have to replace them with their actual values.
     # tags: the tags array
@@ -75,21 +81,24 @@ module RPMSpec
       value
     end
 
+    # remove
     def find_macros(text)
       text.split("%{").reject!(&:empty?).map! { |i| i.match(/(.*)}.*$/)[1] }
     end
 
+    # remove
     def macro_to_hash(macros)
       h = Hash.new
       macros.each { |i| h[i.name] = i.expression }
       h
     end
 
+    # remove
     def pick_tags(text)
       tags = {}
       text.split("\n").select! { |i| i =~ /^[A-Z].*?:/ }.each do |j|
         next if j =~ /^(Source|Patch|BuildRequires|Requires|Provides|Obsoletes|Conflicts|Recommends|Suggests|Supplements)/
-        key = j.match(/^[A-Z].*?:/)[0].sub(':', '')
+	key = j.match(/^[A-Z].*?:/)[0].sub(':', '')
         value = j.match(/:.*$/)[0].sub(':', '').strip!
         tags[key.to_sym] = value
       end
