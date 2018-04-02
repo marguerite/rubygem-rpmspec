@@ -10,9 +10,7 @@ describe RPMSpec do
       "Summary: rpmspec\n" \
       "BuildRoot: rpmspec\n" \
       "BuildArch: rpmspec\n" \
-      "BuildRequires: xz ruby\n" \
-      "BuildRequires: gcc >= 4.4\n" \
-      "BuildRequires: make inittool\n" \
+      "BuildRequires: gcc\n" \
       "Requires: gcc\n" \
       "Provides: gcc\n" \
       "Obsoletes: gcc\n" \
@@ -27,17 +25,29 @@ describe RPMSpec do
     end
   end
 
-  RPMSpec::DEPENDENCY_TAGS[1..-1].each do |tag|
+  RPMSpec::DEPENDENCY_TAGS.each do |tag|
     it "can parse #{tag}" do
       expect(RPMSpec::Tag.new(t).send(tag.downcase.to_sym).join(",")).to eq("gcc")
     end
   end
 
-  it "can parse BuildRequires" do
-    expect(RPMSpec::Tag.new(t).buildrequires).to eq(["xz", "ruby", "gcc >= 4.4", "make", "inittool"])
+  it "can parse comma-style BuildRequires" do
+    expect(RPMSpec::Tag.new("BuildRequires: xz, ruby\n").buildrequires).to eq(["xz", "ruby"])
+  end
+
+  it "can parse space-style BuildRequires" do
+    expect(RPMSpec::Tag.new("BuildRequires: xz ruby\n").buildrequires).to eq(["xz", "ruby"])
   end
 
   it "can parse nil" do
     expect(RPMSpec::Tag.new("BuildRequires: xz\n").requires).to eq(nil)
+  end
+
+  it "can expand macro" do
+    expect(RPMSpec::Tag.new("Name: rpmspec\nVersion: 1.0.0\nRequires: %{name}-%{version}\n").requires).to eq(["rpmspec-1.0.0"])
+  end
+
+  it "can expand macro using provided ones" do
+    expect(RPMSpec::Tag.new("Requires: %{name}-%{version}\n",name:"rpmspec",version:"1.0.0").requires).to eq(["rpmspec-1.0.0"])
   end
 end
