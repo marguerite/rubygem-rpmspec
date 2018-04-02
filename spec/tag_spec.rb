@@ -43,11 +43,19 @@ describe RPMSpec do
     expect(RPMSpec::Tag.new("BuildRequires: xz\n").requires).to eq(nil)
   end
 
-  it "can expand macro" do
+  it "can expand tags" do
     expect(RPMSpec::Tag.new("Name: rpmspec\nVersion: 1.0.0\nRequires: %{name}-%{version}\n").requires).to eq(["rpmspec-1.0.0"])
   end
 
-  it "can expand macro using provided ones" do
+  it "can expand dependency tag" do
     expect(RPMSpec::Tag.new("Requires: %{name}-%{version}\n",name:"rpmspec",version:"1.0.0").requires).to eq(["rpmspec-1.0.0"])
+  end
+
+  it "can expand single tag" do
+    expect(RPMSpec::Tag.new("Url: %{name}/%{name}-%{version}\n", name: "rpmspec", version: "1.0.0").url).to eq("rpmspec/rpmspec-1.0.0")
+  end
+
+  it "can expand macro" do
+    expect(RPMSpec::Tag.new("Requires: lib%{name}%{libver}\n", name: "fcitx", libver: "4_9").requires).to eq(["libfcitx4_9"])
   end
 end

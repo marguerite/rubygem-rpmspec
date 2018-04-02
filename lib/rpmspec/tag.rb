@@ -9,11 +9,8 @@ module RPMSpec
     SINGLE_TAGS.each do |t|
       define_method t.downcase.to_sym do
         r = @text.match(/^#{t}:\s+(.*?)\n/m)
-	return if @args.nil? && r.nil?
-	@args.each do |k, v|
-	  return v if t.downcase.to_sym == k
-	end
-	r[1]
+	return if r.nil?
+	replace_macro(r[1])
       end
     end
 
@@ -45,7 +42,11 @@ module RPMSpec
       r = t.scan(/%{(.*?)}/)
       unless r.empty?
 	r.flatten!.each do |m|
-          tag = send(m.to_sym)
+	  tag = if !@args.empty? && @args.keys.include?(m.to_sym)
+                  @args[m.to_sym]
+		else
+		  send(m.to_sym)
+                end
 	  t.gsub!("%{" + m + "}", tag) unless tag.nil?
         end
       end
