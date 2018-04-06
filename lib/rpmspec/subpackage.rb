@@ -8,39 +8,32 @@ module RPMSpec
     end
 
     def parse
-      return if @text.scan("%package").empty?
+      return if @text.scan('%package').empty?
       names.map! do |i|
-	index = names.find_index(i)
+        index = names.find_index(i)
 
         s = OpenStruct.new
-	s.name = i
-	s.desc = descs[index]
+        s.name = i
+        s.desc = descs[index]
 
-	t = tag_texts[index]
+        t = tag_texts[index]
 
-        (SINGLE_TAGS + DEPENDENCY_TAGS).each do |i|
-	  tag = RPMSpec::Tag.new(t, @args).send(i.downcase.to_sym)
-	  s[i.downcase] = tag unless tag.nil?
-	end
+        (SINGLE_TAGS + DEPENDENCY_TAGS).each do |j|
+          tag = RPMSpec::Tag.new(t, @args).send(j.downcase.to_sym)
+          s[j.downcase] = tag unless tag.nil?
+        end
 
-	s
+        s.files = RPMSpec::File.new(files[index], @args).parse
+
+        s
       end
     end
 
     def strip
-      return @text if @text.scan("%package").empty?
+      return @text if @text.scan('%package').empty?
       text = @text.dup
-      (names_raw + descs_raw + tag_texts).each {|i| text.sub!(i, "") }
+      (names_raw + descs_raw + tag_texts + files_raw).each { |i| text.sub!(i, '') }
       text
-    end
-
-    def inspect
-      names_raw.each do |i|
-        index = names_raw.find_index(i)
-	puts i
-	puts tag_texts[index]
-	puts descs_raw[index]
-      end
     end
 
     private
@@ -51,11 +44,11 @@ module RPMSpec
     end
 
     def names_raw
-      name_matches.map {|i| i[0] }
+      name_matches.map { |i| i[0] }
     end
 
     def names
-      name_matches.map {|i| i[2] }
+      name_matches.map { |i| i[2] }
     end
 
     def desc_matches
@@ -65,17 +58,31 @@ module RPMSpec
     end
 
     def descs_raw
-      desc_matches.map {|i| i[0] }
+      desc_matches.map { |i| i[0] }
     end
 
     def descs
-      desc_matches.map {|i| i[2] }
+      desc_matches.map { |i| i[2] }
     end
 
     def tag_texts
       names_raw.map do |name|
-	@text.match(/#{Regexp.escape(name)}(.*?)^%desc/m)[1]
+        @text.match(/#{Regexp.escape(name)}(.*?)^%desc/m)[1]
       end
+    end
+
+    def file_matches
+      names.map do |name|
+        @text.match(/^%files\s+(-n\s+)?#{name}\n(.*?)\n(\s+)?\n/m)
+      end
+    end
+
+    def files_raw
+      file_matches.map { |i| i[0] }
+    end
+
+    def files
+      file_matches.map { |i| i[2] }
     end
   end
 end
