@@ -18,7 +18,7 @@ module RPMSpec
 
         t = tag_texts[index]
 
-        (SINGLE_TAGS + DEPENDENCY_TAGS).each do |j|
+        TAGS.each do |j|
           tag = RPMSpec::Tag.new(t, @args).send(j.downcase.to_sym)
           s[j.downcase] = tag unless tag.nil?
         end
