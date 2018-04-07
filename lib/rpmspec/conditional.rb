@@ -41,7 +41,7 @@ module RPMSpec
       @item = item
     end
 
-    def parse(raw = false)
+    def parse
       m = @text.match(/^%-\d-if.*#{Regexp.escape(@item)}/m)
       return if m.nil?
       text = m[0]
@@ -51,7 +51,7 @@ module RPMSpec
       ifs = text.scan(/^%-\d-if.*?\n/m)
       return if ifs.empty?
       elses = text.scan(/^%-\d-else.*?\n/m)
-      reverse_else(ifs, elses, raw)
+      reverse_else(ifs, elses)
     end
 
     private
@@ -88,23 +88,15 @@ module RPMSpec
       text
     end
 
-    def reverse_else(ifs, elses, raw = false)
+    def reverse_else(ifs, elses)
       elses.each do |i|
         ifs.each_with_index do |m, n|
           next unless m =~ /#{Regexp.escape(i.strip.sub('else', 'if'))}/
-          ifs[n] = if raw
-                     i
-                   else
-                     m.reverse
-                   end
+          ifs[n] = m.reverse
         end
       end
 
-      if raw
-        ifs
-      else
-        ifs.map! { |i| i.sub!(/-\d-/, '') }
-      end
+      ifs.map! { |i| i.sub!(/-\d-/, '') }
     end
   end
 end
