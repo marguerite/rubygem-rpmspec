@@ -6,4 +6,7 @@ module RPMSpec
             Requires Provides Obsoletes
             Conflicts Recommends Suggests
             Supplements Source Patch).freeze
+  DEPS = %w(BuildRequires Requires Provides
+            Obsoletes Conflicts Recommends
+            Suggests Supplements).freeze
 end

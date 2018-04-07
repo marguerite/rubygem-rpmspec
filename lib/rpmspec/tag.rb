@@ -14,7 +14,7 @@ module RPMSpec
         text = add_order(t, @text.dup)
         r = text.to_enum(:scan, /^\d+-#{t}([a-z0-9()]+)?:\s+(.*?)\n/m).map { Regexp.last_match }
         r.map! do |i|
-          if split_tag(i[2]).instance_of?(Array)
+          if DEPS.include?(t) && split_tag(i[2]).instance_of?(Array)
             split_tag(i[2]).map! { |j| to_struct(j, i, text) }
           else
             to_struct(i[2], i, text)
