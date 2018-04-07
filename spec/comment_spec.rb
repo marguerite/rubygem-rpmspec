@@ -15,10 +15,17 @@ describe RPMSpec do
       "\n# Please submit bugfixes or comments via http://bugs.opensuse.org/\n#\n\n"
 
   it 'can parse Fedora style preamble' do
-    expect(RPMSpec::Preamble.new(f).parse).to eq('')
+    expect(RPMSpec::Comment.new(f).text).to eq(nil)
   end
 
   it 'can parse SUSE style preamble' do
-    expect(RPMSpec::Preamble.new(s).parse).to eq(s)
+    expect(RPMSpec::Comment.new(s).text[0][0]).to eq(s)
+  end
+
+  it 'can parse comments of a patch' do
+    r = "#PATCH-FIX-OPENSUSE marguerite@opensuse.org - fix boo#123\n"
+    stop = "Patch0: abuild.patch\n"
+    c = "#Preamble\nName: fcitx\n#Other useless comments\nVersion: 1.0\n" + r + stop
+    expect(RPMSpec::Comment.new(c, stop).text[-1][0]).to eq(r)
   end
 end
