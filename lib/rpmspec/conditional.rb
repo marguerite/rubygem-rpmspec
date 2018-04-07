@@ -41,7 +41,7 @@ module RPMSpec
       @item = item
     end
 
-    def parse(raw=false)
+    def parse(raw = false)
       m = @text.match(/^%-\d-if.*#{Regexp.escape(@item)}/m)
       return if m.nil?
       text = m[0]
@@ -49,6 +49,7 @@ module RPMSpec
       text.to_enum(:scan, r).map { Regexp.last_match }
           .each { |i| text.sub!(i[0], '') }
       ifs = text.scan(/^%-\d-if.*?\n/m)
+      return if ifs.empty?
       elses = text.scan(/^%-\d-else.*?\n/m)
       reverse_else(ifs, elses, raw)
     end

@@ -5,18 +5,19 @@ module RPMSpec
   class Tag
     def initialize(text, **args)
       @text = text
-      @args = args
+      @args = args # macros passed here
     end
 
     TAGS.each do |t|
       define_method t.downcase.to_sym do
-        r = @text.to_enum(:scan, /^#{t}([a-z0-9()]+)?:\s+(.*?)\n/m).map { Regexp.last_match }
-        return if r.empty?
+        return unless @text =~ /^#{t}/
+        text = add_order(t, @text.dup)
+        r = text.to_enum(:scan, /^\d+-#{t}([a-z0-9()]+)?:\s+(.*?)\n/m).map { Regexp.last_match }
         r.map! do |i|
           if split_tag(i[2]).instance_of?(Array)
-            split_tag(i[2]).map! { |j| to_struct(j, i) }
+            split_tag(i[2]).map! { |j| to_struct(j, i, text) }
           else
-            to_struct(i[2], i)
+            to_struct(i[2], i, text)
           end
         end.flatten
       end
@@ -24,11 +25,22 @@ module RPMSpec
 
     private
 
-    def to_struct(name, match)
+    def add_order(tag, text, count = 0)
+      m = text.to_enum(:scan, /^#{tag}([a-z0-9()]+)?:\s+(.*?)\n/m).map { Regexp.last_match[0] }
+      text.sub!(/^#{Regexp.escape(m[0])}/, count.to_s + '-' + m[0])
+      if text =~ /^#{tag}/m
+        count += 1
+        add_order(tag, text, count)
+      else
+        text
+      end
+    end
+
+    def to_struct(name, match, text)
       s = OpenStruct.new
       s.name = replace_macro(name)
       s.modifier = match[1]
-      s.conditional = RPMSpec::Conditional.new(@text, match[0]).parse
+      s.conditional = RPMSpec::Conditional.new(text, match[0]).parse
       s
     end
 
