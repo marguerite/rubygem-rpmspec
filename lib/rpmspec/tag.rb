@@ -41,6 +41,8 @@ module RPMSpec
       s.name = replace_macro(name)
       s.modifier = match[1]
       s.conditional = RPMSpec::Conditional.new(text, match[0]).parse
+      comment = RPMSpec::Comment.new(text, match[0]).text
+      s.comment = comment[-1][0] unless comment.nil?
       s
     end
 

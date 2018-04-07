@@ -5,5 +5,5 @@ module RPMSpec
             BuildArch Source BuildRequires
             Requires Provides Obsoletes
             Conflicts Recommends Suggests
-            Supplements).freeze
+            Supplements Source Patch).freeze
 end

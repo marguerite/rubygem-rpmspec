@@ -1,10 +1,10 @@
 RPMSpec
 
-=====
+------
 
 [![Code Climate](https://codeclimate.com/github/marguerite/rubygem-rpmspec/badges/gpa.svg)](https://codeclimate.com/github/marguerite/rubygem-rpmspec)
 
-`RPMSpec` parses an RPM specfile into Ruby structs. It not only parses the `tag`s, but also macros, stages like `%install`, file lists, changelog and etc. It can also parse conditional requirements and scriptlets.
+`RPMSpec` parses an RPM specfile into Ruby OpenStructs. It not only parses the `tag`s, but also macros, stages like `%install`, file lists, changelog and etc. It can also parse conditional requirements and scriptlets.
 
 It is distributed as a standard rubygem and licensed under MIT.
 
@@ -27,33 +27,11 @@ It is distributed as a standard rubygem and licensed under MIT.
         specfile = RPMSpec::Parser.new('test.spec').parse
 
         # get package name
-        puts specfile.name # => 'Test'
-        
-Some tags are always single for one package (sub package is a different package). eg:
-
-`Name`, `Version`, `Release`, `License` or `BuildRoot`. Such tags' values are just plain text.
-So they can always be fetched with `spec.#{tag}`.
-
-Some other tags have multiple values (returned as Array of Structs) and own attributes. eg:
-
-A changelog entry contains: modificatioin time, version, the packager's name, the packager's email,
-and the detailed changes. So it is returned with another struct.
-
-A summary of such structs:
-
-| Tag        | Atrributes                                           |
-|------------|------------------------------------------------------|
-| changelog  | modification\_time, version, packager, email, changes |
-| dependency | name, version, conditionals, modifier                |
-| source     | number, url                                          |
-| patch      | number, name, comment                                |
-| macro      | indicator, name, expression, test                    |
-| scriptlet  | name, content, conditionals                          |
-| file       | file, permission, user, group, dirpermission, ghost  |
+        puts specfile.name # => ['Test']
 
 ##### Dependencies #####
 
-`dependency`: it can be 'BuildRequires', 'Requires', 'Provides'...see version.rb::DEPENDENCY\_TAGS.
+`dependency`: it can be 'BuildRequires', 'Requires', 'Provides'...
 
 `conditionals`: an array `["%if 0%{?suse_version} >= 1320", "%if 0%{?suse_version}"]`. Basically, if:
 
@@ -69,15 +47,10 @@ A summary of such structs:
         
 Then, `specfile.buildrequires` will return an array contains a, b, c and d. But their conditionals are different, eg:
 
-        c # => <#Struct 'name'='c' 'conditionals'=['%if 0%{?suse_version}', '%if 0%{?suse_version} >= 1320'] 'modifier'=nil>
-        d # => <#Struct 'name'='d' 'conditionals'=['%if !0%{?suse_version}'] 'modifier'=nil>
+        c # => <#OpenStruct 'name'='c' 'conditionals'=['%if 0%{?suse_version}', '%if 0%{?suse_version} >= 1320'] 'modifier'=nil>
+        d # => <#OpenStruct 'name'='d' 'conditionals'=['%if !0%{?suse_version}'] 'modifier'=nil>
 
 `modifier`: eg `Requires(post)`, the modifier is `post`.
-
-Because we need the parser to pick up dependencies tags with their conditionals first, dependencies can't 
-be processed alone with its class 'RPMSpec::Dependency' without the parser.
-
-The same strategy applies to `post|pre|*` Scriptlet, too.
 
 ##### Self-defined Macros #####
 
@@ -114,35 +87,6 @@ the file permissions and ownerships will always be different.
 
 Sub packages are actually normal packages without some build worker instruction tags like `BuildRoot`.
 
-In order to separate the single tags, we split sub packages with our parser first.
-
-So sub packages can't be processed without the parser either.
-
 ##### Stages #####
 
         specfile.install # => everything under %install section in plain text
-        
-Stages are almost the same, so they are processed by the parser in a way of creating dynamical classes.
-
-They can't be processed without the parser either.
-
-##### Advanced Usage #####
-
-Here we can fetch things like changelogs, sources, patches, the preamble, macros,
-and, if no subpackage, the description and the file list, easily with their classes
-
-        # get the specfile's content
-        f = open('test.spec').read
-        # get sources for example
-        sourceobj = RPMSpec::Source.new(f)
-        oldsources = sourceobj.sources
-        # Now replace the sources with yours
-        newspecfile = f.sub(sourceobj.inspect(oldsources), <Your texts>)
-
-If you just want the single tag like 'Name' or 'Version', you don't need this gem
-actually, it's much more simple with these codes:
-
-        f = open('test.spec').read
-        m = f.match(/^Name:(.*?)\n/)
-        name = m[1]
-        newspecfile = f.sub(name, 'Your Name')
