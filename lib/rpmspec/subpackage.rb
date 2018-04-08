@@ -1,5 +1,3 @@
-require 'ostruct'
-
 module RPMSpec
   class Subpackage
     def initialize(text, **args)

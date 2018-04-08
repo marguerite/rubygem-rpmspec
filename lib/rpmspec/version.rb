@@ -5,7 +5,7 @@ module RPMSpec
             BuildArch Source BuildRequires
             Requires Provides Obsoletes
             Conflicts Recommends Suggests
-            Supplements Source Patch).freeze
+            Supplements Patch).freeze
   DEPS = %w(BuildRequires Requires Provides
             Obsoletes Conflicts Recommends
             Suggests Supplements).freeze

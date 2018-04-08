@@ -1,7 +1,6 @@
 require 'spec_helper'
-require 'ostruct'
 
-describe RPMSpec do
+describe RPMSpec::Tag do
   t = ''
   RPMSpec::TAGS.each { |i| t += i + ":\sgcc\n" }
 

@@ -1,5 +1,3 @@
-require 'ostruct'
-
 class String
   # redefine reverse
   def reverse

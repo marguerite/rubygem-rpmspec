@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe RPMSpec do
+describe RPMSpec::Comment do
   f = "Name:\trubygem-rpmspec\n"
   s = "#\n# spec file for package fcitx\n#\n" \
       "# Copyright (c) 2018 SUSE LINUX GmbH, Nuernberg, Germany.\n" \

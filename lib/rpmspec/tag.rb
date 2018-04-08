@@ -1,5 +1,3 @@
-require 'ostruct'
-
 module RPMSpec
   # parse RPM tags
   class Tag
