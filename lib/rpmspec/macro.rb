@@ -1,31 +1,17 @@
 module RPMSpec
+  # parse rpm macros
   class Macro
     def initialize(text)
-      @arr = text.split("\n").select { |i| i =~ /^%(define|global|{!\?)/ }
-      @struct = Struct.new(:indicator, :name, :expression, :test)
+      @text = text
     end
 
     def parse
-      return if @arr.empty?
-      @arr.map! do |i|
-        test = i =~ /^%{!\?/ ? true : false
-        indicator = i =~ /%define/ ? 'define' : 'global'
-        r = i.match(/#{indicator}\s(.*?)\s(.*$)/)
-        name = r[1]
-        expression = r[2].end_with?('}') ? r[2][0..-2] : r[2]
-        @struct.new(indicator, name, expression, test)
+      m = @text.to_enum(:scan, /^(%{!\?[\w\_-]+:\s+)?%(define|global)(.*?)\n(})?/m).map { Regexp.last_match }
+      return if m.empty?
+      m.map! do |i|
+        conditional = RPMSpec::Conditional.new(@text, i[0]).parse
+        OpenStruct.new(text: i[0], conditional: conditional)
       end
-    end
-
-    def inspect(arr)
-      str = ''
-      arr.each do |i|
-        str << "%{!?#{i.name}:\s" if i.test
-        str << "%#{i.indicator} #{i.name} #{i.expression}"
-        str << '}' if i.test
-        str << "\n"
-      end
-      str
     end
   end
 end

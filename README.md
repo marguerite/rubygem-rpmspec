@@ -58,29 +58,6 @@ Then, `specfile.buildrequires` will return an array contains a, b, c and d. But 
 
 `test`: return `true` if sometimes packagers check the existence of a macro like this `%{!?macro %define macro}`.
 
-##### File Lists #####
-
-The File list is a bit complicated. It is catalogued by categories first:
-
-        specfile.files # => <#OpenStruct 'defattr'=>(skipped) 'doc'=>[], 'config'=>[], 'license'=>[], 'file'=>[], 'list'=>[]>
-
-The categories refer to things like `%doc COPYING`, the plain uncatalogued files are under `file` category.
-
-The `list` category refers to things like `%files lang -f test.lang`, the 'test.lang' is the appended file list.
-        
-So you need to navigate to the special category first:
-
-        specfile.files.doc # => [<#Struct 'file'='COPYING' permission='-' user='root' group='root' dirpermission=nil ghost=false>]
-        
-The 'permission', 'user', 'group', 'dirpermission' comes from `specfile.files.defattr` by default, which is a struct:
-
-        specfile.files.defattr # => <#Struct 'permission'='-', 'user'='root', group='root', dirpermission='-'>
-        
-It refers to the `%defattr(-,root,root,-)`. If there're things like `%attr(0755, test, test) %{_localstatedir}/log/test.org`,
-the file permissions and ownerships will always be different.
-
-`ghost` indicates if this file is a ghost file eg: `%ghost %{_sysconfdir}/test.conf`.
-
 ##### Sub Packages #####
 
         specfile.subpackages # => [<#OpenStruct similar with specfile itself>, <#OpenStruct ... >] 
