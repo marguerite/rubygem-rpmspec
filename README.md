@@ -4,7 +4,7 @@ RPMSpec
 
 [![Code Climate](https://codeclimate.com/github/marguerite/rubygem-rpmspec/badges/gpa.svg)](https://codeclimate.com/github/marguerite/rubygem-rpmspec)
 
-`RPMSpec` parses an RPM specfile into Ruby OpenStructs. It not only parses the `tag`s, but also macros, stages like `%install`, file lists, changelog and etc. It can also parse conditional requirements and scriptlets.
+`RPMSpec` parses an RPM specfile into Ruby OpenStructs. It not only parses the `tag`s, but also macros, sections like `%install`, files, changelog and etc. It can also parse conditional requirements and scriptlets.
 
 It is distributed as a standard rubygem and licensed under MIT.
 
@@ -12,7 +12,7 @@ It is distributed as a standard rubygem and licensed under MIT.
 
 * tag: 'Name', 'Version'...
 * macro: `%define a %(/usr/bin/echo "a")`, `%{!?b %global b %(/usr/bin/echo "b")}`
-* stage: `%prep`, `%build`...
+* section: `%prep`, `%build`...
 * conditional requirements:
 
         %if 0%{?suse_version}
@@ -64,6 +64,6 @@ Then, `specfile.buildrequires` will return an array contains a, b, c and d. But 
 
 Sub packages are actually normal packages without some build worker instruction tags like `BuildRoot`.
 
-##### Stages #####
+##### Sections #####
 
         specfile.install # => everything under %install section in plain text

@@ -42,7 +42,7 @@ module RPMSpec
              desc = find_description(@text, i[2])
              tag_text = find_tag_text(@text, i[0])
              files = find_files(@text, i[2], true)
-             scripts = find_scripts(@text, i[2], true)
+             scripts = find_scripts(@text, i[2])
 
              text.sub!(i[0], '')
              text.sub!(desc[0], '')
