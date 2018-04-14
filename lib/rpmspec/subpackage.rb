@@ -18,7 +18,7 @@ module RPMSpec
                         else
                           @args[:name] + '-' + name
                         end
-             pkg.desc = find_description(@text, i[2])[2]
+             pkg.desc = find_description(@text, i[2])[3]
 
              tag_text = find_tag_text(@text, i[0])
              TAGS.each do |j|
@@ -27,8 +27,10 @@ module RPMSpec
              end
 
              pkg.files = find_files(@text, i[2])
-             pkg.scripts = find_scripts(@text, i[2])
-             pkg.conditional = RPMSpec::Conditional.new(@text, i[0]).parse
+             scripts = find_scripts(@text, i[2])
+             conditional = RPMSpec::Conditional.new(@text, i[0]).parse
+             pkg.scripts = scripts unless scripts.nil?
+             pkg.conditional = conditional unless conditional.nil?
              pkg
            end
     end
@@ -55,13 +57,15 @@ module RPMSpec
              next if scripts.nil?
              scripts.each { |s| text.gsub!(s.text, '') }
            end
-      text
+      # strip the useless self-closed blocks
+      text.gsub(/^%-\d+-if.*?\n%-\d+-endif.*?\n/m, '')
     end
 
     private
 
     def find_description(text, name)
-      text.match(/^%description\s+(-n\s+)?#{Regexp.escape(name)}\n(((?!%prep)(?!%package).)*)\n(\s+)?\n/m)
+      name = name.nil? ? '' : Regexp.escape(name)
+      text.match(/^%description(\s+)?(-n\s+)?#{name}\n(((?!%prep)(?!%package).)*)\n(\s+)?\n/m)
     end
 
     def find_tag_text(text, name)
@@ -69,23 +73,31 @@ module RPMSpec
     end
 
     def find_files(text, name, raw = false)
-      m = text.match(/^%files\s+(-n\s+)?#{Regexp.escape(name)}\n(((?!%files)(?!%changelog).)*)\n(\s+)?\n/m)
+      name = name.nil? ? '' : Regexp.escape(name)
+      m = text.match(/^%files(\s+)?(-n\s+)?#{name}(-f.*?)?\n(((?!%files)(?!%changelog).)*)\n(\s+)?\n/m)
       conditional = RPMSpec::Conditional.new(@text, m[0]).parse
-      files = if raw
-                m[2]
-              else
-                RPMSpec::Tag.new(@text, @args).send(:replace_macro, m[2])
-              end.split("\n")
-      OpenStruct.new(text: files, conditional: conditional)
+      s = OpenStruct.new
+      s.text = if raw
+                 m[4]
+               else
+                 RPMSpec::Tag.new(@text, @args).send(:replace_macro, m[4])
+               end.split("\n")
+      s.list = m[3].sub!(/-f\s+/, '') unless m[3].nil?
+      s.conditional = conditional unless conditional.nil?
+      s
     end
 
     def find_scripts(text, name)
-      m = text.to_enum(:scan, /^%(pre|post)(un)?\s+(-n\s+)?#{Regexp.escape(name)}(((?!%p)(?!%f)(?!%-).)*)\n/m)
+      name = name.nil? ? '' : Regexp.escape(name)
+      m = text.to_enum(:scan, /^%(pre|post)(un)?\s+(-n\s+)?#{name}(((?!%p)(?!%f)(?!%-).)*)\n/m)
               .map { Regexp.last_match }
       return if m.empty?
       m.map! do |i|
+        s = OpenStruct.new
         conditional = RPMSpec::Conditional.new(@text, i[0]).parse
-        OpenStruct.new(text: i[0], conditional: conditional)
+        s.text = i[0]
+        s.conditional = conditional unless conditional.nil?
+        s
       end
     end
   end

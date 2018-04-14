@@ -37,8 +37,9 @@ module RPMSpec
     def to_struct(name, match, text)
       s = OpenStruct.new
       s.name = replace_macro(name)
-      s.modifier = match[1]
-      s.conditional = RPMSpec::Conditional.new(text, match[0]).parse
+      s.modifier = match[1] unless match[1].nil?
+      conditional = RPMSpec::Conditional.new(text, match[0]).parse
+      s.conditional = conditional unless conditional.nil?
       comment = RPMSpec::Comment.new(text, match[0]).text
       s.comment = comment[-1][0] unless comment.nil?
       s
