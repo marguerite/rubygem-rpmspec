@@ -63,9 +63,12 @@ module RPMSpec
 
     private
 
+    def confident_name(name)
+      name.nil? ? '' : Regexp.escape(name)
+    end
+
     def find_description(text, name)
-      name = name.nil? ? '' : Regexp.escape(name)
-      text.match(/^%description(\s+)?(-n\s+)?#{name}\n(((?!%prep)(?!%package).)*)\n(\s+)?\n/m)
+      text.match(/^%description(\s+)?(-n\s+)?#{confident_name(name)}\n(((?!%prep)(?!%package).)*)\n(\s+)?\n/m)
     end
 
     def find_tag_text(text, name)
@@ -73,8 +76,7 @@ module RPMSpec
     end
 
     def find_files(text, name, raw = false)
-      name = name.nil? ? '' : Regexp.escape(name)
-      m = text.match(/^%files(\s+)?(-n\s+)?#{name}(-f.*?)?\n(((?!%files)(?!%changelog).)*)\n(\s+)?\n/m)
+      m = text.match(/^%files(\s+)?(-n\s+)?#{confident_name(name)}(-f.*?)?\n(((?!%files)(?!%changelog).)*)\n(\s+)?\n/m)
       conditional = RPMSpec::Conditional.new(@text, m[0]).parse
       s = OpenStruct.new
       s.text = if raw
@@ -88,8 +90,7 @@ module RPMSpec
     end
 
     def find_scripts(text, name)
-      name = name.nil? ? '' : Regexp.escape(name)
-      m = text.to_enum(:scan, /^%(pre|post)(un)?\s+(-n\s+)?#{name}(((?!%p)(?!%f)(?!%-).)*)\n/m)
+      m = text.to_enum(:scan, /^%(pre|post)(un)?\s+(-n\s+)?#{confident_name(name)}(((?!%p)(?!%f)(?!%-).)*)\n/m)
               .map { Regexp.last_match }
       return if m.empty?
       m.map! do |i|
