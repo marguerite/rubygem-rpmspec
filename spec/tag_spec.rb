@@ -6,10 +6,8 @@ describe RPMSpec::Tag do
 
   s = OpenStruct.new
   s.name = 'gcc'
-  s.modifier = nil
-  s.conditional = nil
 
-  r = %w[xz ruby].map! do |i|
+  r = %w(xz ruby).map! do |i|
     j = s.dup
     j.name = i
     j
@@ -43,21 +41,21 @@ describe RPMSpec::Tag do
     expect(RPMSpec::Tag.new("Requires: lib%{name}%{libver}\n", name: 'fcitx', libver: '4_9').requires).to eq([s])
   end
 
-  it 'can recognize Requires(post)' do
-    s.modifier = '(post)'
-    expect(RPMSpec::Tag.new("Requires(post): libfcitx4_9\n").requires).to eq([s])
-  end
-
-  it 'can recognize Source0' do
-    s.modifier = '0'
-    expect(RPMSpec::Tag.new("Source0: lib%{name}%{libver}\n", name: 'fcitx', libver: '4_9').source).to eq([s])
-  end
-
   it 'can distinguish idential contents' do
     s.name = 'gcc'
-    s.modifier = nil
     n = s.dup
     n.conditional = ["%if 0%{?suse_version} > 1230\n"]
     expect(RPMSpec::Tag.new("%if 0%{?suse_version} > 1230\nRequires: gcc\n%endif\nRequires: gcc\n").requires).to eq([n, s])
+  end
+
+  it 'can recognize Requires(post)' do
+    s.modifier = '(post)'
+    expect(RPMSpec::Tag.new("Requires(post): gcc\n").requires).to eq([s])
+  end
+
+  it 'can recognize Source0' do
+    s.name = 'libfcitx4_9'
+    s.modifier = '0'
+    expect(RPMSpec::Tag.new("Source0: lib%{name}%{libver}\n", name: 'fcitx', libver: '4_9').source).to eq([s])
   end
 end

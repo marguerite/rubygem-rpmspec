@@ -26,6 +26,6 @@ describe RPMSpec::Conditional do
 
   it 'can add levels to conditionals in text' do
     result = "%-1-if a\n%-0-if b\nc\n%-0-endif\n%-1-endif\n"
-    expect(RPMSpec::Conditional.new("%if a\n%if b\nc\n%endif\n%endif\n", '').text).to eq(result)
+    expect(RPMSpec::Conditional.new("%if a\n%if b\nc\n%endif\n%endif\n", '').instance_variable_get(:@text)).to eq(result)
   end
 end
