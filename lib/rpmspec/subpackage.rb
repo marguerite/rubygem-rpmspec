@@ -52,13 +52,13 @@ module RPMSpec
 
              # or defattr for the main file block will be stripped too.
              text.gsub!(/^%files\s+(-n\s+)?#{Regexp.escape(i[2])}\n(%defattr.*?\n)?/, '')
-             files.text[1..-1].each { |t| text.gsub!(/^#{Regexp.escape(t)}/, '') if text.index(t) }
+             files.files[1..-1].each { |t| text.gsub!(/^#{Regexp.escape(t.file)}/, '') if text.index(t.file) }
 
              next if scripts.nil?
              scripts.each { |s| text.gsub!(s.text, '') }
            end
-      # strip the useless self-closed blocks
-      text.gsub(/^%-\d+-if.*?\n%-\d+-endif.*?\n/m, '')
+      # strip the useless self-closed conditional blocks
+      text.gsub(/^%if.*?\n%endif.*?\n/m, '')
     end
 
     private
@@ -77,16 +77,33 @@ module RPMSpec
 
     def find_files(text, name, raw = false)
       m = text.match(/^%files(\s+)?(-n\s+)?#{confident_name(name)}(-f.*?)?\n(((?!%files)(?!%changelog).)*)\n(\s+)?\n/m)
-      conditional = RPMSpec::Conditional.new(@text, m[0]).parse
+      cond_text = @text.match(/^%if((?!%files).)*?#{Regexp.escape(m[0])}/m)
+      conditional = RPMSpec::Conditional.new(cond_text[0], m[0].strip!.gsub!(/%endif\Z/m, '')).parse unless cond_text.nil?
       s = OpenStruct.new
-      s.text = if raw
-                 m[4]
-               else
-                 RPMSpec::Tag.new(@text, @args).send(:replace_macro, m[4])
-               end.split("\n")
+      s.files = parse_file(m[4], raw)
       s.list = m[3].sub!(/-f\s+/, '') unless m[3].nil?
       s.conditional = conditional unless conditional.nil?
       s
+    end
+
+    def parse_file(files, raw)
+      files.split("\n").map! do |i|
+        # ignore %if and %endif
+        if i =~ /^%.*if/ || i.empty?
+          nil
+        else
+          cond = RPMSpec::Conditional.new(files, i).parse
+          file = if raw
+                   i
+                 else
+                   RPMSpec::Tag.new(@text, @args).send(:replace_macro, i)
+                 end
+          s = OpenStruct.new
+          s.file = file
+          s.conditional = cond unless cond.nil?
+          s
+        end
+      end.compact
     end
 
     def find_scripts(text, name)

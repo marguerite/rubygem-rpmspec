@@ -33,9 +33,9 @@ end
 module RPMSpec
   # find its conditional for a RPM tag
   class Conditional
-    attr_reader :text
     def initialize(text, item)
-      @text = add_level(text, find_level(text))
+      t = text.dup
+      @text = add_level(t, find_level(t))
       @item = item
     end
 
