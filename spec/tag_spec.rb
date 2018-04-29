@@ -5,17 +5,11 @@ describe RPMSpec::Tag do
   RPMSpec::TAGS.each { |i| t += i + ":\sgcc\n" }
 
   s = OpenStruct.new
-  s.name = 'gcc'
-
-  r = %w(xz ruby).map! do |i|
-    j = s.dup
-    j.name = i
-    j
-  end
+  r = %w(xz ruby)
 
   RPMSpec::TAGS.each do |tag|
     it "can parse #{tag}" do
-      expect(RPMSpec::Tag.new(t).send(tag.downcase.to_sym)).to eq([s])
+      expect(RPMSpec::Tag.new(t).send(tag.downcase.to_sym)).to eq(['gcc'])
     end
   end
 
@@ -32,20 +26,18 @@ describe RPMSpec::Tag do
   end
 
   it 'can expand tags' do
-    s.name = 'rpmspec-1.0.0'
-    expect(RPMSpec::Tag.new("Name: rpmspec\nVersion: 1.0.0\nRequires: %{name}-%{version}\n").requires).to eq([s])
+    expect(RPMSpec::Tag.new("Name: rpmspec\nVersion: 1.0.0\nRequires: %{name}-%{version}\n").requires).to eq(["rpmspec-1.0.0"])
   end
 
   it 'can expand macro' do
-    s.name = 'libfcitx4_9'
-    expect(RPMSpec::Tag.new("Requires: lib%{name}%{libver}\n", name: 'fcitx', libver: '4_9').requires).to eq([s])
+    expect(RPMSpec::Tag.new("Requires: lib%{name}%{libver}\n", name: 'fcitx', libver: '4_9').requires).to eq(["libfcitx4_9"])
   end
 
   it 'can distinguish idential contents' do
     s.name = 'gcc'
     n = s.dup
     n.conditional = ["%if 0%{?suse_version} > 1230\n"]
-    expect(RPMSpec::Tag.new("%if 0%{?suse_version} > 1230\nRequires: gcc\n%endif\nRequires: gcc\n").requires).to eq([n, s])
+    expect(RPMSpec::Tag.new("%if 0%{?suse_version} > 1230\nRequires: gcc\n%endif\nRequires: gcc\n").requires).to eq([n, "gcc"])
   end
 
   it 'can recognize Requires(post)' do

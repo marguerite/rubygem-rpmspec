@@ -40,7 +40,7 @@ module RPMSpec
     end
 
     def parse
-      m = @text.match(/^%-\d-if.*#{Regexp.escape(@item)}/m)
+      m = @text.match(/^%-\d-if.*#{RPMSpec::Conditional.escape(@item)}/m)
       return if m.nil?
       text = m[0]
       r = /^%-\d-if((?!%-\d-if)(?!%-\d-endif).)*%-\d-endif(\s+)?\n/m
@@ -50,6 +50,19 @@ module RPMSpec
       return if ifs.empty?
       elses = text.scan(/^%-\d-else.*?\n/m)
       reverse_else(ifs, elses)
+    end
+
+    class << self
+      # the string itself shouldn't contain any conditional
+      def escape(str, regex=true)
+        m = str.to_enum(:scan, /^%(end)?if(((?!%if)(?!endif).)*)\n/m).map { Regexp.last_match }
+        if m.empty?
+          regex ? Regexp.escape(str) : str
+        end
+        new = str.dup
+        m.each { |i| new.sub!(i[0], '') }
+        regex ? Regexp.escape(new) : new
+      end
     end
 
     private

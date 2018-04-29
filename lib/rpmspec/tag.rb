@@ -13,9 +13,9 @@ module RPMSpec
         r = text.to_enum(:scan, /^\d+-#{t}([a-z0-9()]+)?:\s+(.*?)\n/m).map { Regexp.last_match }
         r.map! do |i|
           if DEPS.include?(t) && split_tag(i[2]).instance_of?(Array)
-            split_tag(i[2]).map! { |j| to_struct(j, i, text) }
+            split_tag(i[2]).map! { |j| to_tag(j, i, text) }
           else
-            to_struct(i[2], i, text)
+            to_tag(i[2], i, text)
           end
         end.flatten
       end
@@ -34,15 +34,14 @@ module RPMSpec
       end
     end
 
-    def to_struct(name, match, text)
-      s = OpenStruct.new
-      s.name = replace_macro(name)
-      s.modifier = match[1] unless match[1].nil?
-      conditional = RPMSpec::Conditional.new(text, match[0]).parse
-      s.conditional = conditional unless conditional.nil?
-      comment = RPMSpec::Comment.new(text, match[0]).text
-      s.comment = comment[-1][0] unless comment.nil?
-      s
+    def to_tag(name, match, text)
+      comment = RPMSpec::Comment.new(text, match[0]).comments
+      comment = comment[-1] unless comment.nil?
+      RPMSpec.send(:item_new,
+                   name: replace_macro(name),
+                   modifier: match[1],
+                   conditional: RPMSpec::Conditional.new(text, match[0]).parse,
+                   comment: comment)
     end
 
     def split_tag(text)
@@ -62,7 +61,7 @@ module RPMSpec
           tag = if !@args.empty? && @args.keys.include?(m.to_sym)
                   @args[m.to_sym]
                 elsif methods.include?(m.to_sym)
-                  send(m.to_sym)[0].name
+                  confident_return_name(send(m.to_sym)[0])
                 end
           text.gsub!("%{#{m}}", tag) unless tag.nil?
         end

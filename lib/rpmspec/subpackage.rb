@@ -17,20 +17,16 @@ module RPMSpec
                          @args[:name] + '-' + name
                        end
              desc = find_description(@text, i[2])[3]
-
-             tag_text = find_tag_text(@text, i[0])
-             tag_hash = {}
-             TAGS.each do |j|
-               tag = RPMSpec::Tag.new(tag_text, @args).send(j.downcase.to_sym)
-               tag_hash[j.downcase.to_sym] = tag unless tag.nil?
-             end
-
+             tags = find_tags(find_tag_text(@text, i[0]), @args)
              files = find_files(@text, i[2])
              scripts = find_scripts(@text, i[2])
              conditional = RPMSpec::Conditional.new(@text, i[0]).parse
 
-             RPMSpec.send(:form_result, name: pkgname, description: desc, files: files,
-                                        scripts: scripts, conditional: conditional, **tag_hash)
+             # "package" could not be "name", tags contains it
+             RPMSpec.send(:item_new, package: pkgname,
+                          description: desc, files: files,
+                          scripts: scripts, conditional: conditional,
+                          **tags)
            end
     end
 
@@ -54,24 +50,19 @@ module RPMSpec
 
     private
 
-    def confident_name(name)
-      name.nil? ? '' : Regexp.escape(name)
-    end
-
-    def find_description(text, name)
-      text.match(/^%description(\s+)?(-n\s+)?#{confident_name(name)}\n(((?!%prep)(?!%package).)*)\n(\s+)?\n/m)
-    end
-
     def find_tag_text(text, name)
       text.match(/#{Regexp.escape(name)}(.*?)^%desc/m)[1]
     end
 
     def find_files(text, name, raw = false)
-      m = text.match(/^%files(\s+)?(-n\s+)?#{confident_name(name)}(-f.*?)?\n(((?!%files)(?!%changelog).)*)\n(\s+)?\n/m)
+      m = text.match(/^%files(\s+)?(-n\s+)?#{confident_escape_name(name)}(-f.*?)?\n(((?!%files)(?!%changelog).)*)\n(\s+)?\n/m)
       cond_text = @text.match(/^%if((?!%files).)*?#{Regexp.escape(m[0])}/m)
       conditional = RPMSpec::Conditional.new(cond_text[0], m[0].strip!.gsub!(/%endif\Z/m, '')).parse unless cond_text.nil?
       list = m[3].sub!(/-f\s+/, '') unless m[3].nil?
-      RPMSpec.send(:form_result, files: parse_file(m[4], raw), list: list, conditional: conditional)
+      RPMSpec.send(:item_new,
+                   files: parse_file(m[4], raw),
+                   list: list,
+                   conditional: conditional)
     end
 
     def parse_file(files, raw)
@@ -85,14 +76,28 @@ module RPMSpec
                  else
                    RPMSpec::Tag.new(@text, @args).send(:replace_macro, i)
                  end
-          RPMSpec.send(:form_result, file: file,
-                                     conditional: RPMSpec::Conditional.new(files, i).parse)
+          RPMSpec.send(:item_new,
+                       file: file,
+                       conditional: RPMSpec::Conditional.new(files, i).parse)
         end
       end.compact
     end
 
+    def find_scripts(text, name)
+      # %p: %post %pre %postun %preun
+      # %f: %files
+      m = text.to_enum(:scan, /^%(pre|post)(un)?\s+(-n\s+)?#{confident_escape_name(name)}(((?!%p)(?!%f).)*)\n/m)
+              .map { Regexp.last_match }
+      return if m.empty?
+      m.map! do |i|
+        RPMSpec.send(:item_new,
+                     script: RPMSpec::Conditional.send(:escape, i[0], false),
+                     conditional: RPMSpec::Conditional.new(@text, i[0]).parse)
+      end
+    end
+
     def strip_files(files, name, text)
-      name = confident_name(name)
+      name = confident_escape_name(name)
       # or defattrs will be all stripped
       text.gsub!(/^%files\s+(-n\s+)?#{name}\n(%defattr.*?\n)?/, '')
       files = if files.instance_of?(Array)
@@ -107,16 +112,6 @@ module RPMSpec
         text.gsub!(/^#{Regexp.escape(t)}/, '') if text.index(t)
       end
       text
-    end
-
-    def find_scripts(text, name)
-      m = text.to_enum(:scan, /^%(pre|post)(un)?\s+(-n\s+)?#{confident_name(name)}(((?!%p)(?!%f)(?!%-).)*)\n/m)
-              .map { Regexp.last_match }
-      return if m.empty?
-      m.map! do |i|
-        RPMSpec.send(:form_result, script: i[0],
-                                   conditional: RPMSpec::Conditional.new(@text, i[0]).parse)
-      end
     end
 
     def strip_scripts(scripts, text)
