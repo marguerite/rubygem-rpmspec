@@ -6,13 +6,13 @@ module RPMSpec
       @args = args # macros passed here
     end
 
-    TAGS.each do |t|
+    RPMSpec::TAGS.each do |t|
       define_method t.downcase.to_sym do
         return unless @text =~ /^#{t}/
         text = add_order(t, @text.dup)
         r = text.to_enum(:scan, /^\d+-#{t}([a-z0-9()]+)?:\s+(.*?)\n/m).map { Regexp.last_match }
         r.map! do |i|
-          if DEPS.include?(t) && split_tag(i[2]).instance_of?(Array)
+          if RPMSpec::DEPS.include?(t) && split_tag(i[2]).instance_of?(Array)
             split_tag(i[2]).map! { |j| to_tag(j, i, text) }
           else
             to_tag(i[2], i, text)
